@@ -1,0 +1,132 @@
+/* ============================================================
+   Tudo — responsive & interaction polish. Loaded last so it
+   overrides globals.css / modules.css where needed.
+   ============================================================ */
+
+/* --- Never scroll sideways --- */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+.main,
+.canvas {
+  min-width: 0;
+  max-width: 100%;
+}
+/* Let flex/grid text children shrink instead of forcing overflow */
+.tbody,
+.cinfo,
+.meta,
+.rl-body,
+.rel-body,
+.notif > div,
+.bell-item,
+.chat-main,
+.chat-li .cinfo {
+  min-width: 0;
+}
+
+/* --- Login: bulletproof horizontal + vertical centering --- */
+.login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-card {
+  margin: auto;
+}
+
+/* --- Stat tiles: keep text clear of the absolute corner icon --- */
+.stat .k,
+.stat .v,
+.stat .d {
+  padding-right: 42px;
+}
+
+/* --- Responsive split (list + detail), e.g. Concerns --- */
+.split {
+  display: grid;
+  grid-template-columns: 330px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Instant-navigation skeleton --- */
+.skl {
+  border-radius: var(--r-lg);
+  background: linear-gradient(100deg, var(--surface-2) 30%, var(--surface-3) 50%, var(--surface-2) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.25s ease-in-out infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skl {
+    animation: none;
+  }
+}
+
+/* --- Tablet --- */
+@media (max-width: 900px) {
+  .canvas {
+    padding: 20px 16px 96px;
+  }
+  .topbar {
+    padding: 13px 16px;
+  }
+}
+
+/* --- Phone --- */
+@media (max-width: 560px) {
+  .g-4 {
+    grid-template-columns: 1fr !important;
+  }
+  .g-2 {
+    grid-template-columns: 1fr !important;
+  }
+  .topbar {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  .topbar h2 {
+    font-size: 16.5px;
+    line-height: 1.2;
+  }
+  .topbar .sub {
+    font-size: 11.5px;
+  }
+  .top-actions {
+    gap: 6px;
+  }
+  .card.pad {
+    padding: 16px;
+  }
+  .stat {
+    padding: 16px;
+  }
+  .stat .v {
+    font-size: 21px !important;
+  }
+  h3.sec {
+    font-size: 15px;
+  }
+  .tabs {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .copybox pre {
+    font-size: 11px;
+  }
+}

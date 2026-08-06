@@ -94,7 +94,7 @@ export default function ConcernsClient({
   }
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: "340px 1fr", gap: 18 }}>
+    <div className="split">
       <div className="card pad" style={{ alignSelf: "start" }}>
         <button className="btn btn-primary btn-block" onClick={() => setView("new")} style={{ marginBottom: 14 }}>
           + New concern

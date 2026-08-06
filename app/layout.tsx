@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./modules.css";
+import "./responsive.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tudo.vercel.app";
 const description =

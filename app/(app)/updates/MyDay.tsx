@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setTaskStatusAction, saveTaskUpdateAction } from "@/app/actions/updates";
 import { toast } from "@/components/Toaster";
@@ -15,17 +15,25 @@ const STEPS: { value: string; label: string; color: string }[] = [
 function TaskLine({ task, child }: { task: Task; child?: boolean }) {
   const router = useRouter();
   const [upd, setUpd] = useState(task.updateText || "");
-  const [busy, setBusy] = useState(false);
-  const status = task.status || "pending";
-  const done = status === "done";
+  const [localStatus, setLocalStatus] = useState(task.status || "pending");
+
+  // Re-sync when the server data changes (after a refresh).
+  useEffect(() => {
+    setLocalStatus(task.status || "pending");
+  }, [task.status]);
+
+  const done = localStatus === "done";
 
   async function setStatus(value: string) {
-    if (value === status) return;
-    setBusy(true);
+    if (value === localStatus) return;
+    setLocalStatus(value); // optimistic — instant feedback
     const r = await setTaskStatusAction({ id: task.id, status: value });
-    if (!r.ok) toast(r.error || "Error");
-    else router.refresh();
-    setBusy(false);
+    if (!r.ok) {
+      setLocalStatus(task.status || "pending");
+      toast(r.error || "Couldn't update");
+    } else {
+      router.refresh();
+    }
   }
 
   async function saveUpd() {
@@ -38,21 +46,20 @@ function TaskLine({ task, child }: { task: Task; child?: boolean }) {
   return (
     <div className={`task${done ? " done" : ""}`} style={child ? { marginLeft: 28 } : undefined}>
       <div className="tbody">
-        <div className="between" style={{ gap: 10, alignItems: "flex-start" }}>
+        <div className="between" style={{ gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
           <div className="t" style={{ paddingTop: 3 }}>
             {child ? "— " : ""}
             {task.content}
           </div>
           <div className="seg" style={{ flex: "none" }}>
             {STEPS.map((s) => {
-              const on = status === s.value;
+              const on = localStatus === s.value;
               return (
                 <button
                   key={s.value}
                   className={on ? "on" : ""}
                   style={on ? { color: s.color } : undefined}
                   onClick={() => setStatus(s.value)}
-                  disabled={busy}
                   type="button"
                 >
                   {s.label}
