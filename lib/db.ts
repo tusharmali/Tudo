@@ -1,22 +1,103 @@
 /**
- * Generic Google-Sheet data helpers with a short-TTL in-memory cache.
+ * Google-Sheet data layer, quota-optimized.
  *
- * The Google Sheets API caps reads at ~60/min per service account, shared by
- * ALL app traffic. Without caching, one dashboard load (many tabs, some read
- * repeatedly) plus polling blows the quota. The cache collapses repeated reads
- * of the same tab into one API call per TTL window, and writes invalidate it.
+ * Google caps reads at ~60/min per service account, shared by ALL app traffic.
+ * Reading one tab at a time meant a single dashboard load could fire ~10 reads
+ * at once and blow the quota. Instead we read the ENTIRE spreadsheet in ONE
+ * `values:batchGet` call (1 quota unit for all tabs), cache that snapshot for a
+ * few seconds, and de-duplicate concurrent loads so a burst of reads shares a
+ * single request. Writes invalidate the snapshot so you always see your change.
  * Node runtime only.
  */
 import type { GoogleSpreadsheetRow } from "google-spreadsheet";
+import { JWT } from "google-auth-library";
 import { getSheet } from "./sheets";
+import { getServiceAccount, getSheetId } from "./env";
+import { SCHEMA } from "./schema";
 
 export type Row = Record<string, string>;
 
-const CACHE_TTL_MS = 8000;
-const cache = new Map<string, { at: number; rows: Row[] }>();
+const SNAPSHOT_TTL_MS = 12000;
+let snapshot: { at: number; tabs: Record<string, Row[]> } | null = null;
+let inflight: Promise<Record<string, Row[]>> | null = null;
 
-function invalidate(tab: string) {
-  cache.delete(tab);
+let authClient: JWT | null = null;
+function getAuth(): JWT {
+  if (authClient) return authClient;
+  const { clientEmail, privateKey } = getServiceAccount();
+  authClient = new JWT({
+    email: clientEmail,
+    key: privateKey,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+  return authClient;
+}
+
+function parseRange(values: string[][] | undefined): Row[] {
+  const vals = values || [];
+  const headers = vals[0] || [];
+  const rows: Row[] = [];
+  for (let r = 1; r < vals.length; r++) {
+    const row: Row = {};
+    for (let c = 0; c < headers.length; c++) {
+      const v = vals[r][c];
+      row[headers[c]] = v == null ? "" : String(v);
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** Read every tab in a single batchGet request (1 quota unit). */
+async function batchGetAll(): Promise<Record<string, Row[]>> {
+  const auth = getAuth();
+  const { token } = await auth.getAccessToken();
+  if (!token) throw new Error("Could not obtain a Google access token.");
+  const id = getSheetId();
+  const tabNames = Object.keys(SCHEMA);
+  const rangesQS = tabNames.map((t) => `ranges=${encodeURIComponent(t)}`).join("&");
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values:batchGet?${rangesQS}&majorDimension=ROWS`;
+
+  let res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 429) {
+    await new Promise((r) => setTimeout(r, 1500));
+    res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Sheets read failed (${res.status}). ${body.slice(0, 160)}`);
+  }
+  const data = (await res.json()) as { valueRanges?: { values?: string[][] }[] };
+  const vr = data.valueRanges || [];
+  const out: Record<string, Row[]> = {};
+  tabNames.forEach((tab, i) => {
+    out[tab] = parseRange(vr[i]?.values);
+  });
+  return out;
+}
+
+async function loadSnapshot(fresh = false): Promise<Record<string, Row[]>> {
+  if (!fresh && snapshot && Date.now() - snapshot.at < SNAPSHOT_TTL_MS) return snapshot.tabs;
+  if (inflight) return inflight;
+  inflight = batchGetAll()
+    .then((tabs) => {
+      snapshot = { at: Date.now(), tabs };
+      return tabs;
+    })
+    .finally(() => {
+      inflight = null;
+    });
+  return inflight;
+}
+
+function invalidate() {
+  snapshot = null;
+}
+
+/** Read every row of a tab (served from the cached whole-sheet snapshot). */
+export async function allRows(tab: string, opts?: { fresh?: boolean }): Promise<Row[]> {
+  const tabs = await loadSnapshot(opts?.fresh);
+  return tabs[tab] ? [...tabs[tab]] : [];
 }
 
 function toObj(r: GoogleSpreadsheetRow): Row {
@@ -24,49 +105,17 @@ function toObj(r: GoogleSpreadsheetRow): Row {
   const out: Row = {};
   for (const k of Object.keys(raw)) {
     const v = raw[k];
-    out[k] = v === undefined || v === null ? "" : String(v);
+    out[k] = v == null ? "" : String(v);
   }
   return out;
 }
 
-function is429(e: unknown): boolean {
-  const err = e as { code?: number; status?: number; response?: { status?: number }; message?: string };
-  return err?.code === 429 || err?.status === 429 || err?.response?.status === 429 || (err?.message || "").includes("Quota exceeded");
-}
-
-async function fetchRows(tab: string): Promise<Row[]> {
-  try {
-    const sheet = await getSheet(tab);
-    return (await sheet.getRows()).map(toObj);
-  } catch (e) {
-    if (!is429(e)) throw e;
-    // Ride out a brief quota spike, then retry once.
-    await new Promise((r) => setTimeout(r, 1500));
-    const sheet = await getSheet(tab);
-    return (await sheet.getRows()).map(toObj);
-  }
-}
-
-/** Read every row of a tab as plain objects (cached ~8s unless `fresh`). */
-export async function allRows(tab: string, opts?: { fresh?: boolean }): Promise<Row[]> {
-  const now = Date.now();
-  if (!opts?.fresh) {
-    const hit = cache.get(tab);
-    if (hit && now - hit.at < CACHE_TTL_MS) return hit.rows;
-  }
-  const rows = await fetchRows(tab);
-  cache.set(tab, { at: now, rows });
-  return rows;
-}
-
-/** Append one row. */
 export async function appendRow(tab: string, data: Row): Promise<void> {
   const sheet = await getSheet(tab);
   await sheet.addRow(data);
-  invalidate(tab);
+  invalidate();
 }
 
-/** Update every row matching `pred`; returns the number changed. */
 export async function updateWhere(tab: string, pred: (row: Row) => boolean, patch: Row): Promise<number> {
   const sheet = await getSheet(tab);
   const rows = await sheet.getRows();
@@ -78,11 +127,10 @@ export async function updateWhere(tab: string, pred: (row: Row) => boolean, patc
       changed++;
     }
   }
-  if (changed) invalidate(tab);
+  if (changed) invalidate();
   return changed;
 }
 
-/** Delete every row matching `pred`; returns the number removed. */
 export async function deleteWhere(tab: string, pred: (row: Row) => boolean): Promise<number> {
   const sheet = await getSheet(tab);
   const rows = await sheet.getRows();
@@ -93,11 +141,10 @@ export async function deleteWhere(tab: string, pred: (row: Row) => boolean): Pro
       removed++;
     }
   }
-  if (removed) invalidate(tab);
+  if (removed) invalidate();
   return removed;
 }
 
-/** Read a key/value tab (Settings, AttendanceConfig) into a map. */
 export async function readConfig(tab: string): Promise<Row> {
   const rows = await allRows(tab);
   const map: Row = {};
@@ -105,18 +152,15 @@ export async function readConfig(tab: string): Promise<Row> {
   return map;
 }
 
-/** Set a key in a key/value tab (insert or update). */
 export async function setConfig(tab: string, key: string, value: string): Promise<void> {
   const changed = await updateWhere(tab, (r) => r.key === key, { value });
   if (changed === 0) await appendRow(tab, { key, value });
 }
 
-/** Short unique id like "tk_lp3f9a2b". */
 export function genId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
-/** Today's date as YYYY-MM-DD in the given IANA tz (default Asia/Kolkata). */
 export function todayStr(tz = "Asia/Kolkata"): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: tz,
