@@ -15,12 +15,14 @@ export default function DayPlanBuilder({
   weekTargets,
   footer,
   dayPlanText,
+  date,
 }: {
   users: BuilderUser[];
   tasksByUser: Record<string, TaskNode[]>;
   weekTargets: Record<string, string>;
   footer: string;
   dayPlanText: string;
+  date: string;
 }) {
   const router = useRouter();
   const [sel, setSel] = useState(users[0]?.id || "");
@@ -44,7 +46,7 @@ export default function DayPlanBuilder({
       return;
     }
     setBusy(true);
-    const r = await createTaskAction({ userId: sel, content: newTask, parentId: parentId || undefined });
+    const r = await createTaskAction({ userId: sel, content: newTask, parentId: parentId || undefined, date });
     if (r.ok) {
       toast(r.message || "Added");
       setNewTask("");

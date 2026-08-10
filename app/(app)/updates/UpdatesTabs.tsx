@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import DatePicker from "./DatePicker";
 import MyDay from "./MyDay";
 import DayPlanBuilder, { type BuilderUser } from "./DayPlanBuilder";
 import OverallUpdate from "./OverallUpdate";
 import WipComposer from "./WipComposer";
 import type { TaskNode } from "@/lib/tasks";
+import type { WipSections } from "@/lib/format";
 
 export interface AdminData {
   users: BuilderUser[];
@@ -19,19 +21,21 @@ export interface AdminData {
 
 export default function UpdatesTabs({
   isAdmin,
+  date,
+  today,
   myTree,
   myWeekTarget,
-  myWip,
+  savedWip,
   autoWip,
-  date,
   admin,
 }: {
   isAdmin: boolean;
+  date: string;
+  today: string;
   myTree: TaskNode[];
   myWeekTarget: string;
-  myWip: string;
-  autoWip: string;
-  date: string;
+  savedWip: WipSections | null;
+  autoWip: WipSections;
   admin: AdminData | null;
 }) {
   const tabs = isAdmin ? ["My Day", "Day Plan", "Overall Update", "WIP"] : ["My Day", "WIP"];
@@ -39,6 +43,8 @@ export default function UpdatesTabs({
 
   return (
     <>
+      <DatePicker date={date} today={today} />
+
       <div className="tabs">
         {tabs.map((t) => (
           <button key={t} className={`tab${tab === t ? " on" : ""}`} onClick={() => setTab(t)} type="button">
@@ -48,7 +54,7 @@ export default function UpdatesTabs({
       </div>
 
       {tab === "My Day" && <MyDay tree={myTree} weekTarget={myWeekTarget} />}
-      {tab === "WIP" && <WipComposer saved={myWip} autoWip={autoWip} date={date} />}
+      {tab === "WIP" && <WipComposer saved={savedWip} auto={autoWip} date={date} />}
       {isAdmin && admin && tab === "Day Plan" && (
         <DayPlanBuilder
           users={admin.users}
@@ -56,9 +62,10 @@ export default function UpdatesTabs({
           weekTargets={admin.weekTargets}
           footer={admin.footer}
           dayPlanText={admin.dayPlanText}
+          date={date}
         />
       )}
-      {isAdmin && admin && tab === "Overall Update" && <OverallUpdate updatesText={admin.updatesText} aiOn={admin.aiOn} />}
+      {isAdmin && admin && tab === "Overall Update" && <OverallUpdate updatesText={admin.updatesText} aiOn={admin.aiOn} date={date} />}
     </>
   );
 }

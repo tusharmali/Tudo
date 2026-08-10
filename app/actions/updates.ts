@@ -2,18 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, requireAdmin } from "@/lib/dal";
-import { todayStr } from "@/lib/db";
+import { allRows, todayStr } from "@/lib/db";
 import { listByDate, toTree, createTask, setStatus, setUpdate, removeTask, setWeekTarget } from "@/lib/tasks";
 import { setSetting } from "@/lib/settings";
 import { setWip } from "@/lib/wip";
 import { listUsers } from "@/lib/users";
 import { generateOverall } from "@/lib/ai";
 import { actionError, type Res } from "@/lib/action";
+import type { WipSections } from "@/lib/format";
 
 const STATUSES = ["pending", "in-progress", "done"];
+const asDate = (d: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d : todayStr());
 
+/** Find a task by id across all dates and check ownership. */
 async function ownTaskOrAdmin(id: string, userId: string, isAdmin: boolean) {
-  const tasks = await listByDate();
+  const tasks = await allRows("Tasks");
   const t = tasks.find((x) => x.id === id);
   if (!t) throw new Error("Task not found.");
   if (!isAdmin && t.userId !== userId) throw new Error("That's not your task.");
@@ -24,8 +27,7 @@ export async function setTaskStatusAction(input: { id: string; status: string })
   try {
     const u = await requireUser();
     await ownTaskOrAdmin(input.id, u.sub, u.role === "superadmin");
-    const status = STATUSES.includes(input.status) ? input.status : "pending";
-    await setStatus(input.id, status);
+    await setStatus(input.id, STATUSES.includes(input.status) ? input.status : "pending");
     revalidatePath("/updates");
     return { ok: true };
   } catch (e) {
@@ -45,13 +47,13 @@ export async function saveTaskUpdateAction(input: { id: string; updateText: stri
   }
 }
 
-export async function createTaskAction(input: { userId: string; content: string; parentId?: string }): Promise<Res> {
+export async function createTaskAction(input: { userId: string; content: string; parentId?: string; date: string }): Promise<Res> {
   try {
     const admin = await requireAdmin();
     if (!input.content.trim()) return { ok: false, error: "Type the task first." };
     await createTask({
       userId: input.userId,
-      date: todayStr(),
+      date: asDate(input.date),
       content: input.content.trim(),
       parentId: input.parentId,
       createdBy: admin.sub,
@@ -96,10 +98,10 @@ export async function setFooterAction(input: { text: string }): Promise<Res> {
   }
 }
 
-export async function saveWipAction(input: { content: string }): Promise<Res> {
+export async function saveWipAction(input: { date: string; sections: WipSections }): Promise<Res> {
   try {
     const u = await requireUser();
-    await setWip(u.sub, input.content);
+    await setWip(u.sub, JSON.stringify(input.sections), asDate(input.date));
     revalidatePath("/updates");
     return { ok: true, message: "WIP saved" };
   } catch (e) {
@@ -107,10 +109,10 @@ export async function saveWipAction(input: { content: string }): Promise<Res> {
   }
 }
 
-export async function generateOverallAction(): Promise<Res<string>> {
+export async function generateOverallAction(input: { date: string }): Promise<Res<string>> {
   try {
     await requireAdmin();
-    const date = todayStr();
+    const date = asDate(input.date);
     const [users, tasks] = await Promise.all([listUsers(), listByDate(date)]);
     const parts: string[] = [];
     for (const u of users) {
@@ -125,7 +127,7 @@ export async function generateOverallAction(): Promise<Res<string>> {
       });
       parts.push(`${u.name}:\n${lines.join("\n")}`);
     }
-    if (!parts.length) return { ok: false, error: "No tasks or updates yet to summarize." };
+    if (!parts.length) return { ok: false, error: "No tasks or updates yet to summarize for this day." };
 
     const overall = await generateOverall(parts.join("\n\n"));
     await setSetting(`overall:${date}`, overall);

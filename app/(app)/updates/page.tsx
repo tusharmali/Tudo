@@ -4,24 +4,26 @@ import { listByDate, listForUser, toTree, type TaskNode } from "@/lib/tasks";
 import { getWip } from "@/lib/wip";
 import { getSettings } from "@/lib/settings";
 import { listUsers } from "@/lib/users";
-import { renderDayPlan, renderUpdates, wipBodyFromTasks } from "@/lib/format";
+import { renderDayPlan, renderUpdates, autoWipSections, parseWipSections } from "@/lib/format";
 import { aiEnabled } from "@/lib/ai";
 import UpdatesTabs, { type AdminData } from "./UpdatesTabs";
 
 export const dynamic = "force-dynamic";
 
-export default async function UpdatesPage() {
+export default async function UpdatesPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const user = await getCurrentUser();
   if (!user) return null;
   const isAdmin = user.role === "superadmin";
-  const date = todayStr();
+  const today = todayStr();
+  const sp = await searchParams;
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date || "") ? (sp.date as string) : today;
   const settings = await getSettings();
 
   const myTasks = await listForUser(user.sub, date);
   const myTree = toTree(myTasks);
   const myWeekTarget = settings[`weektarget:${user.sub}`] || "";
-  const myWip = await getWip(user.sub, date);
-  const autoWip = wipBodyFromTasks(myTree);
+  const savedWip = parseWipSections(await getWip(user.sub, date));
+  const autoWip = autoWipSections(myTree);
 
   let admin: AdminData | null = null;
   if (isAdmin) {
@@ -59,11 +61,12 @@ export default async function UpdatesPage() {
   return (
     <UpdatesTabs
       isAdmin={isAdmin}
+      date={date}
+      today={today}
       myTree={myTree}
       myWeekTarget={myWeekTarget}
-      myWip={myWip}
+      savedWip={savedWip}
       autoWip={autoWip}
-      date={date}
       admin={admin}
     />
   );

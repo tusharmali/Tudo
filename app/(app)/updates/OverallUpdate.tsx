@@ -6,13 +6,13 @@ import { generateOverallAction } from "@/app/actions/updates";
 import { toast } from "@/components/Toaster";
 import CopyButton from "@/components/CopyButton";
 
-export default function OverallUpdate({ updatesText, aiOn }: { updatesText: string; aiOn: boolean }) {
+export default function OverallUpdate({ updatesText, aiOn, date }: { updatesText: string; aiOn: boolean; date: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function generate() {
     setBusy(true);
-    const r = await generateOverallAction();
+    const r = await generateOverallAction({ date });
     if (r.ok) {
       toast(r.message || "Done");
       router.refresh();

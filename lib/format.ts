@@ -17,15 +17,7 @@ function fmtDM(iso: string): string {
   return `${d}/${m}`;
 }
 
-/** Suffix that describes a task's status / update for update & WIP lines. */
-function statusSuffix(t: { status: string; updateText: string }): string {
-  const u = (t.updateText || "").trim();
-  if (u) return ` - ${u}`;
-  if (t.status === "done") return " - Done";
-  if (t.status === "in-progress") return " - In progress";
-  return "";
-}
-
+// ---------- Day Plan ----------
 export interface PlanBlock {
   handle: string;
   nodes: TaskNode[];
@@ -49,6 +41,7 @@ export function renderDayPlan(date: string, blocks: PlanBlock[], footer = ""): s
   return out.join("\n");
 }
 
+// ---------- Updates ----------
 export interface UpdateBlock {
   name: string;
   nodes: TaskNode[];
@@ -69,16 +62,70 @@ export function renderUpdates(date: string, blocks: UpdateBlock[], overall = "")
   return out.join("\n");
 }
 
-/** Build the WIP body straight from a person's task tree, showing status. */
-export function wipBodyFromTasks(nodes: TaskNode[]): string {
-  const lines: string[] = [];
-  for (const n of nodes) {
-    lines.push(`o ${n.content}${statusSuffix(n)}`);
-    for (const c of n.children) lines.push(`     - ${c.content}${statusSuffix(c)}`);
-  }
-  return lines.join("\n");
+// ---------- WIP (structured, editable sections) ----------
+export interface WipSections {
+  worked: string;
+  pending: string;
+  blockers: string;
+  plan: string;
 }
 
-export function renderWip(date: string, content: string): string {
-  return [`WIP ${fmtDate(date, "-")}`, "", "", content.trim(), "", "", "Signing off!"].join("\n");
+export const EMPTY_WIP: WipSections = { worked: "", pending: "", blockers: "", plan: "" };
+
+/** Pre-fill the WIP sections from a person's tasks for the day. */
+export function autoWipSections(nodes: TaskNode[]): WipSections {
+  const worked: string[] = [];
+  const pending: string[] = [];
+  for (const t of nodes.flatMap((n) => [n, ...n.children])) {
+    const upd = t.updateText.trim();
+    if (t.status === "done" || t.status === "in-progress") {
+      const suffix = upd ? ` - ${upd}` : t.status === "in-progress" ? " [in-progress]" : "";
+      worked.push(`- ${t.content}${suffix}`);
+    }
+    if (t.status === "pending" || t.status === "in-progress") {
+      pending.push(`- ${t.content}`);
+    }
+  }
+  return {
+    worked: worked.join("\n"),
+    pending: pending.join("\n"),
+    blockers: "- N/A",
+    plan: "- Task as per assigned and bugs if any",
+  };
+}
+
+/** Parse the sections back out of a stored WIP cell (JSON). Returns null for legacy/plain text. */
+export function parseWipSections(raw: string): WipSections | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as Partial<WipSections>;
+    if (o && typeof o === "object" && ("worked" in o || "pending" in o || "blockers" in o || "plan" in o)) {
+      return {
+        worked: String(o.worked ?? ""),
+        pending: String(o.pending ?? ""),
+        blockers: String(o.blockers ?? ""),
+        plan: String(o.plan ?? ""),
+      };
+    }
+  } catch {
+    /* not JSON */
+  }
+  return null;
+}
+
+export function renderWip(date: string, s: WipSections): string {
+  const block = (title: string, body: string, fallback: string): string[] => [title, body.trim() || fallback];
+  return [
+    `WIP ${fmtDate(date, "-")}`,
+    "",
+    ...block("Tasks worked on (with brief output):", s.worked, "- "),
+    "",
+    ...block("Pending/In Progress:", s.pending, "- N/A"),
+    "",
+    ...block("Blockers (if any):", s.blockers, "- N/A"),
+    "",
+    ...block("Plan for tomorrow:", s.plan, "- Task as per assigned and bugs if any"),
+    "",
+    "Signing off",
+  ].join("\n");
 }
