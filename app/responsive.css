@@ -3,13 +3,33 @@
    overrides globals.css / modules.css where needed.
    ============================================================ */
 
+/* --- App shell: a fixed frame; only the main panel scrolls, so the
+       sidebar and top bar stay put (never scroll away). --- */
+.app {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+.sidebar {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+}
+.main {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* --- Never scroll sideways --- */
 html,
 body {
   overflow-x: hidden;
   max-width: 100%;
 }
-.main,
 .canvas {
   min-width: 0;
   max-width: 100%;

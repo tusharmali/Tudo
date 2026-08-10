@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "@/components/NotificationBell";
 import type { SessionUser } from "@/lib/types";
@@ -79,6 +79,7 @@ export default function Shell({ user, children }: { user: SessionUser; children:
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [greeting, setGreeting] = useState("Welcome back");
   const [dateStr, setDateStr] = useState("");
+  const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = (document.documentElement.getAttribute("data-theme") as "light" | "dark") || "light";
@@ -86,6 +87,11 @@ export default function Shell({ user, children }: { user: SessionUser; children:
     setGreeting(greetWord());
     setDateStr(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }));
   }, []);
+
+  // The main panel is the scroll container — reset it to the top on navigation.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
 
   function toggleTheme() {
     const nextT = theme === "dark" ? "light" : "dark";
@@ -125,14 +131,16 @@ export default function Shell({ user, children }: { user: SessionUser; children:
         ))}
 
         <div className="side-user">
-          <div className="avatar" style={{ background: user.color }}>
-            {initials(user.name)}
-          </div>
-          <div className="meta">
-            <div className="n">{user.name}</div>
-            <div className="r">{roleLabel}</div>
-          </div>
-          <form action={logout} style={{ marginLeft: "auto" }}>
+          <Link href="/account" className="row" style={{ gap: 10, minWidth: 0, flex: 1, color: "inherit" }} title="Account & password">
+            <div className="avatar" style={{ background: user.color }}>
+              {initials(user.name)}
+            </div>
+            <div className="meta">
+              <div className="n">{user.name}</div>
+              <div className="r">{roleLabel}</div>
+            </div>
+          </Link>
+          <form action={logout}>
             <button className="icon-btn" style={{ width: 32, height: 32 }} title="Sign out" type="submit">
               {icons.logout}
             </button>
@@ -140,7 +148,7 @@ export default function Shell({ user, children }: { user: SessionUser; children:
         </div>
       </aside>
 
-      <div className="main">
+      <div className="main" ref={mainRef}>
         <header className="topbar">
           <div>
             <h2>
@@ -153,9 +161,9 @@ export default function Shell({ user, children }: { user: SessionUser; children:
               {theme === "dark" ? icons.sun : icons.moon}
             </button>
             <NotificationBell />
-            <div className="avatar" style={{ background: user.color }}>
+            <Link href="/account" className="avatar" style={{ background: user.color, textDecoration: "none" }} title="Account & password">
               {initials(user.name)}
-            </div>
+            </Link>
           </div>
         </header>
 
