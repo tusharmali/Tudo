@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createTaskAction, deleteTaskAction, setWeekTargetAction, setFooterAction } from "@/app/actions/updates";
+import { createTaskAction, deleteTaskAction, setWeekTargetAction, setFooterAction, copyPreviousDayPlanAction } from "@/app/actions/updates";
 import { toast } from "@/components/Toaster";
 import CopyButton from "@/components/CopyButton";
 import type { TaskNode } from "@/lib/tasks";
@@ -31,6 +31,7 @@ export default function DayPlanBuilder({
   const [newTask, setNewTask] = useState("");
   const [parentId, setParentId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyCopy, setBusyCopy] = useState(false);
 
   useEffect(() => {
     setWt(weekTargets[sel] || "");
@@ -79,13 +80,30 @@ export default function DayPlanBuilder({
     } else toast(r.error || "Error");
   }
 
+  async function copyPrev() {
+    const hasTasks = Object.values(tasksByUser).some((arr) => arr.length > 0);
+    if (hasTasks && !window.confirm("This day already has tasks. Copy the previous day's plan on top anyway?")) return;
+    setBusyCopy(true);
+    const r = await copyPreviousDayPlanAction({ date });
+    if (r.ok) {
+      toast(r.message || "Copied");
+      router.refresh();
+    } else toast(r.error || "Error");
+    setBusyCopy(false);
+  }
+
   return (
     <div className="grid g-2-1">
       <div className="stack">
         <div className="card pad">
-          <div className="between" style={{ marginBottom: 12 }}>
+          <div className="between" style={{ marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
             <h3 className="sec">Day Plan Builder</h3>
-            <span className="pill p-peri">Super Admin</span>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="btn btn-ghost" style={{ padding: "7px 12px", fontSize: 12.5 }} onClick={copyPrev} disabled={busyCopy} type="button">
+                {busyCopy ? "Copying…" : "↻ Copy previous day"}
+              </button>
+              <span className="pill p-peri">Super Admin</span>
+            </div>
           </div>
 
           <label className="lbl">Teammate</label>

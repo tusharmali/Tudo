@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, requireAdmin } from "@/lib/dal";
-import { allRows, todayStr } from "@/lib/db";
+import { allRows, appendRows, genId, todayStr } from "@/lib/db";
 import { listByDate, toTree, createTask, setStatus, setUpdate, removeTask, setWeekTarget } from "@/lib/tasks";
 import { setSetting } from "@/lib/settings";
 import { setWip } from "@/lib/wip";
@@ -133,6 +133,43 @@ export async function generateOverallAction(input: { date: string }): Promise<Re
     await setSetting(`overall:${date}`, overall);
     revalidatePath("/updates");
     return { ok: true, data: overall, message: "Overall update drafted by AI" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** Copy the most recent prior day's tasks into `date` — fresh, reset to pending. */
+export async function copyPreviousDayPlanAction(input: { date: string }): Promise<Res> {
+  try {
+    const admin = await requireAdmin();
+    const target = asDate(input.date);
+    const all = await allRows("Tasks");
+    const priorDates = [...new Set(all.filter((t) => t.date && t.date < target).map((t) => t.date))].sort();
+    const src = priorDates[priorDates.length - 1];
+    if (!src) return { ok: false, error: "No earlier day plan found to copy from." };
+    const srcTasks = all.filter((t) => t.date === src);
+    if (!srcTasks.length) return { ok: false, error: "The previous plan has no tasks." };
+
+    const idMap: Record<string, string> = {};
+    for (const t of srcTasks) idMap[t.id] = genId("tk");
+    const now = new Date().toISOString();
+    const rows = srcTasks.map((t) => ({
+      id: idMap[t.id],
+      userId: t.userId,
+      date: target,
+      parentId: t.parentId ? idMap[t.parentId] || "" : "",
+      content: t.content,
+      weekTarget: "",
+      section: t.section || "",
+      status: "pending",
+      updateText: "",
+      order: t.order || "0",
+      createdBy: admin.sub,
+      createdAt: now,
+    }));
+    await appendRows("Tasks", rows);
+    revalidatePath("/updates");
+    return { ok: true, message: `Copied ${rows.length} tasks from ${src.slice(5).replace("-", "/")}` };
   } catch (e) {
     return actionError(e);
   }

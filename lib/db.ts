@@ -100,6 +100,14 @@ export async function allRows(tab: string, opts?: { fresh?: boolean }): Promise<
   return tabs[tab] ? [...tabs[tab]] : [];
 }
 
+/** Append many rows in ONE API call (batch). */
+export async function appendRows(tab: string, rows: Row[]): Promise<void> {
+  if (!rows.length) return;
+  const sheet = await getSheet(tab);
+  await sheet.addRows(rows);
+  invalidate();
+}
+
 function toObj(r: GoogleSpreadsheetRow): Row {
   const raw = r.toObject();
   const out: Row = {};
