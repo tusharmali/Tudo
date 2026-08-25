@@ -39,17 +39,14 @@ export async function checkInAction(coords: Coords): Promise<Res> {
       if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) {
         return { ok: false, error: "Couldn't read your location. Allow location access and try again." };
       }
-      // GPS always has an error margin (tiny on phones, large on laptops/Wi-Fi).
-      // Give the benefit of the doubt: you're "at the office" if your accuracy
-      // circle reaches the geofence. Only reject a genuinely unusable fix.
+      // GPS always has an error margin — tiny on phones, but huge on laptops and
+      // desktops that locate via Wi-Fi/IP (often many km). We never block on a
+      // weak fix: you're treated as "at the office" whenever your accuracy circle
+      // could reach the geofence. Only a device that CAN locate precisely and is
+      // clearly outside the radius gets stopped. Distance + accuracy are recorded
+      // either way, so admins can still spot an implausible check-in.
       const acc = Number.isFinite(coords.accuracy) ? Math.max(0, coords.accuracy) : 0;
       distanceM = haversine(coords.lat, coords.lng, cfg.officeLat, cfg.officeLng);
-      if (acc > 20000) {
-        return {
-          ok: false,
-          error: "Couldn't pin down your location (GPS signal very weak). Try again near a window, or check in from your phone.",
-        };
-      }
       const effectiveDistance = Math.max(0, distanceM - acc);
       if (effectiveDistance > cfg.radiusM) {
         return {
