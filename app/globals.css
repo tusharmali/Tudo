@@ -238,6 +238,19 @@ h3.sec { font-family: var(--round); font-size: 16px; font-weight: 750; letter-sp
   .mnav.active { color: var(--accent-ink); }
 }
 
+/* ---------- Mobile "More" sheet ---------- */
+button.mnav { border: 0; cursor: pointer; font-family: inherit; }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 70; background: color-mix(in srgb, #10101a 48%, transparent); display: flex; align-items: flex-end; animation: sheet-fade .16s ease; }
+.sheet { width: 100%; background: var(--surface); border-top-left-radius: 22px; border-top-right-radius: 22px; border-top: 1px solid var(--line); padding: 8px 14px calc(16px + env(safe-area-inset-bottom)); max-height: 84vh; overflow-y: auto; box-shadow: 0 -14px 44px rgba(0,0,0,.22); animation: sheet-up .24s cubic-bezier(.22,.61,.36,1); }
+.sheet-grip { width: 40px; height: 4px; border-radius: 3px; background: var(--line); margin: 6px auto 10px; }
+.sheet .nav-item { font-size: 15px; padding: 12px; }
+.sheet .nav-item svg { width: 21px; height: 21px; }
+.sheet button.nav-item { background: none; border: 0; cursor: pointer; font-family: inherit; }
+.sheet-foot { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 2px; }
+.sheet-foot form { margin: 0; }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .05ms !important; }
   .blob { animation: none; }

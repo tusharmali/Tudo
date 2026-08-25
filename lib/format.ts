@@ -17,6 +17,16 @@ function fmtDM(iso: string): string {
   return `${d}/${m}`;
 }
 
+function statusLabel(s: string): string {
+  return s === "done" ? "Done" : s === "in-progress" ? "In progress" : "Pending";
+}
+
+/** One task line: "<bullet> <name> — <written update> [Status]". */
+function taskLine(bullet: string, content: string, updateText: string, status: string): string {
+  const upd = (updateText || "").trim();
+  return `${bullet} ${content}${upd ? ` — ${upd}` : ""} [${statusLabel(status)}]`;
+}
+
 // ---------- Day Plan ----------
 export interface PlanBlock {
   handle: string;
@@ -52,9 +62,8 @@ export function renderUpdates(date: string, blocks: UpdateBlock[], overall = "")
   for (const b of blocks) {
     out.push(b.name);
     for (const n of b.nodes) {
-      const txt = n.updateText.trim() || `${n.content}${n.status === "done" ? " - Done" : n.status === "in-progress" ? " - In progress" : ""}`;
-      out.push(`o ${txt}`);
-      for (const c of n.children) out.push(`  - ${c.updateText.trim() || c.content}`);
+      out.push(taskLine("o", n.content, n.updateText, n.status));
+      for (const c of n.children) out.push(taskLine("  -", c.content, c.updateText, c.status));
     }
     out.push("");
   }
@@ -72,18 +81,27 @@ export interface WipSections {
 
 export const EMPTY_WIP: WipSections = { worked: "", pending: "", blockers: "", plan: "" };
 
-/** Pre-fill the WIP sections from a person's tasks for the day. */
+/** Pre-fill the WIP sections from a person's tasks for the day.
+ *  Sub-tasks stay nested under their parent, and every line reads
+ *  "<name> — <update> [Status]". A parent shows in a section if it, or
+ *  any of its children, belongs there — carrying only the matching kids. */
 export function autoWipSections(nodes: TaskNode[]): WipSections {
   const worked: string[] = [];
   const pending: string[] = [];
-  for (const t of nodes.flatMap((n) => [n, ...n.children])) {
-    const upd = t.updateText.trim();
-    if (t.status === "done" || t.status === "in-progress") {
-      const suffix = upd ? ` - ${upd}` : t.status === "in-progress" ? " [in-progress]" : "";
-      worked.push(`- ${t.content}${suffix}`);
+  const isWorked = (s: string) => s === "done" || s === "in-progress";
+  const isPending = (s: string) => s === "pending" || s === "in-progress";
+
+  for (const n of nodes) {
+    const workedKids = n.children.filter((c) => isWorked(c.status));
+    const pendingKids = n.children.filter((c) => isPending(c.status));
+
+    if (isWorked(n.status) || workedKids.length) {
+      worked.push(taskLine("-", n.content, n.updateText, n.status));
+      for (const c of workedKids) worked.push(taskLine("  -", c.content, c.updateText, c.status));
     }
-    if (t.status === "pending" || t.status === "in-progress") {
-      pending.push(`- ${t.content}`);
+    if (isPending(n.status) || pendingKids.length) {
+      pending.push(taskLine("-", n.content, n.updateText, n.status));
+      for (const c of pendingKids) pending.push(taskLine("  -", c.content, c.updateText, c.status));
     }
   }
   return {

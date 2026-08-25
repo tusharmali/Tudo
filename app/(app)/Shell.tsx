@@ -26,6 +26,8 @@ const icons = {
   logout: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M15 12H3m0 0 4-4m-4 4 4 4M9 5V4a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-1" />),
   sun: svg(<><circle cx="12" cy="12" r="4" /><path strokeLinecap="round" d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M19 5l-1.4 1.4M6.4 17.6 5 19" /></>),
   moon: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />),
+  more: svg(<><rect x="4" y="4" width="6" height="6" rx="1.5" /><rect x="14" y="4" width="6" height="6" rx="1.5" /><rect x="4" y="14" width="6" height="6" rx="1.5" /><rect x="14" y="14" width="6" height="6" rx="1.5" /></>),
+  account: svg(<><circle cx="12" cy="8" r="4" /><path strokeLinecap="round" strokeLinejoin="round" d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" /></>),
 };
 
 type NavItem = { href: string; label: string; icon: ReactNode; badge?: string };
@@ -58,7 +60,6 @@ const MOBILE: NavItem[] = [
   { href: "/updates", label: "Updates", icon: icons.updates },
   { href: "/attendance", label: "Attend", icon: icons.attendance },
   { href: "/chat", label: "Chat", icon: icons.chat },
-  { href: "/concerns", label: "Concerns", icon: icons.concerns },
 ];
 
 function initials(name: string): string {
@@ -81,6 +82,7 @@ export default function Shell({ user, children }: { user: SessionUser; children:
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [greeting, setGreeting] = useState("Welcome back");
   const [dateStr, setDateStr] = useState("");
+  const [moreOpen, setMoreOpen] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,9 +92,11 @@ export default function Shell({ user, children }: { user: SessionUser; children:
     setDateStr(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }));
   }, []);
 
-  // The main panel is the scroll container — reset it to the top on navigation.
+  // The main panel is the scroll container — reset it to the top on navigation,
+  // and always close the mobile "More" sheet when the route changes.
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
+    setMoreOpen(false);
   }, [pathname]);
 
   function toggleTheme() {
@@ -179,7 +183,46 @@ export default function Shell({ user, children }: { user: SessionUser; children:
             <span>{item.label}</span>
           </Link>
         ))}
+        <button type="button" className={`mnav${moreOpen ? " active" : ""}`} onClick={() => setMoreOpen(true)}>
+          {icons.more}
+          <span>More</span>
+        </button>
       </nav>
+
+      {moreOpen && (
+        <div className="sheet-backdrop" onClick={() => setMoreOpen(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Menu">
+            <div className="sheet-grip" />
+            {sections.map((sec, i) => (
+              <div key={i}>
+                {sec.section && <div className="nav-label">{sec.section}</div>}
+                {sec.items.map((item) => (
+                  <Link key={item.href} href={item.href} className={`nav-item${isActive(item.href) ? " active" : ""}`}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            ))}
+            <div className="sheet-foot">
+              <Link href="/account" className="nav-item">
+                {icons.account}
+                <span>Account &amp; password</span>
+              </Link>
+              <button type="button" className="nav-item" onClick={toggleTheme}>
+                {theme === "dark" ? icons.sun : icons.moon}
+                <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+              </button>
+              <form action={logout}>
+                <button className="nav-item" type="submit" style={{ width: "100%" }}>
+                  {icons.logout}
+                  <span>Sign out</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
