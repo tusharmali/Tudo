@@ -39,14 +39,19 @@ export async function checkInAction(coords: Coords): Promise<Res> {
       if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) {
         return { ok: false, error: "Couldn't read your location. Allow location access and try again." };
       }
-      if (coords.accuracy && coords.accuracy > cfg.minAccuracyM) {
+      // GPS always has an error margin (tiny on phones, large on laptops/Wi-Fi).
+      // Give the benefit of the doubt: you're "at the office" if your accuracy
+      // circle reaches the geofence. Only reject a genuinely unusable fix.
+      const acc = Number.isFinite(coords.accuracy) ? Math.max(0, coords.accuracy) : 0;
+      distanceM = haversine(coords.lat, coords.lng, cfg.officeLat, cfg.officeLng);
+      if (acc > 20000) {
         return {
           ok: false,
-          error: `Location signal is too weak (±${Math.round(coords.accuracy)}m). Step into the open and retry.`,
+          error: "Couldn't pin down your location (GPS signal very weak). Try again near a window, or check in from your phone.",
         };
       }
-      distanceM = haversine(coords.lat, coords.lng, cfg.officeLat, cfg.officeLng);
-      if (distanceM > cfg.radiusM) {
+      const effectiveDistance = Math.max(0, distanceM - acc);
+      if (effectiveDistance > cfg.radiusM) {
         return {
           ok: false,
           error: `You're ~${Math.round(distanceM)}m from the office (limit ${cfg.radiusM}m). Get closer, or request WFH.`,

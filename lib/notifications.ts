@@ -1,4 +1,4 @@
-import { allRows, appendRow, genId } from "./db";
+import { allRows, appendRow, deleteWhere, genId } from "./db";
 import { getSetting, setSetting } from "./settings";
 
 export interface Notification {
@@ -36,4 +36,14 @@ export async function getLastRead(userId: string): Promise<string> {
 
 export async function markRead(userId: string): Promise<void> {
   await setSetting(`notifread:${userId}`, new Date().toISOString());
+}
+
+/** Admin: remove a single notification. Returns rows removed. */
+export async function remove(id: string): Promise<number> {
+  return deleteWhere("Notifications", (r) => r.id === id);
+}
+
+/** Admin: clear every notification. Returns rows removed. */
+export async function clearAll(): Promise<number> {
+  return deleteWhere("Notifications", () => true);
 }

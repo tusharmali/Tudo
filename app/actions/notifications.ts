@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, requireAdmin } from "@/lib/dal";
-import { create, markRead } from "@/lib/notifications";
+import { create, markRead, remove, clearAll } from "@/lib/notifications";
 import { saveSubscription, sendToAll } from "@/lib/push";
 import { actionError, type Res } from "@/lib/action";
 
@@ -26,6 +26,30 @@ export async function markNotificationsReadAction(): Promise<Res> {
     const u = await requireUser();
     await markRead(u.sub);
     return { ok: true };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function deleteNotificationAction(input: { id: string }): Promise<Res> {
+  try {
+    await requireAdmin();
+    if (!input.id) return { ok: false, error: "Missing notification id." };
+    const n = await remove(input.id);
+    if (!n) return { ok: false, error: "Notification not found." };
+    revalidatePath("/broadcast");
+    return { ok: true, message: "Notification deleted" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function clearAllNotificationsAction(): Promise<Res> {
+  try {
+    await requireAdmin();
+    const n = await clearAll();
+    revalidatePath("/broadcast");
+    return { ok: true, message: n ? `Cleared ${n} notification${n === 1 ? "" : "s"}` : "Nothing to clear" };
   } catch (e) {
     return actionError(e);
   }
