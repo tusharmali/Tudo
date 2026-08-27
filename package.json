@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "init-sheet": "tsx scripts/init-sheet.ts"
+    "init-sheet": "tsx scripts/init-sheet.ts",
+    "init-zoxo": "tsx scripts/init-zoxo-sheet.ts"
   },
   "dependencies": {
     "@types/web-push": "^3.6.4",
