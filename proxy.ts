@@ -8,7 +8,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { COOKIE_NAME, verifySession } from "@/lib/session";
 
-const PUBLIC_PATHS = ["/login"];
+// "/zoxo" holds the Zoxo extension's privacy policy, which the Chrome Web Store
+// requires to be publicly reachable without signing in.
+const PUBLIC_PATHS = ["/login", "/zoxo"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -24,8 +26,10 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Already signed in but on a public page → send to the dashboard.
-  if (session && isPublic) {
+  // Already signed in but on a sign-in page → send to the dashboard. Other
+  // public pages (the Zoxo privacy policy) stay reachable either way.
+  const isSignInPage = pathname === "/login" || pathname.startsWith("/login/");
+  if (session && isSignInPage) {
     const url = req.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
