@@ -22,7 +22,15 @@ type UserLite = { id: string; name: string };
 type NameInfo = { name: string; color: string; avatar: string };
 type Overview = { chatId: string; lastText: string; lastAt: string; lastFrom: string; unread: number; readAt: string; muted: boolean };
 
-const EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "🙏"];
+const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "🙏", "🔥", "👏"];
+const ALL_EMOJIS = [
+  "👍", "👎", "❤️", "🔥", "🎉", "👏", "🙏", "😂",
+  "😅", "😊", "😍", "😎", "🤩", "😜", "🤔", "😐",
+  "😴", "😢", "😭", "😡", "🤯", "🥳", "😱", "🤗",
+  "🙌", "💪", "✅", "❌", "⭐", "💯", "👀", "💡",
+  "🚀", "⏰", "📌", "☕", "🍕", "🎯", "✨", "💬",
+  "📈", "🐛", "⚡", "🌟", "🤝", "👋", "🥲", "💀",
+];
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -70,6 +78,9 @@ export default function ChatClient({
   const [showThread, setShowThread] = useState(false);
   const [separatorAt, setSeparatorAt] = useState("");
   const [reactFor, setReactFor] = useState<string | null>(null);
+  const [reactExpanded, setReactExpanded] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const emojiRef = useRef<HTMLDivElement>(null);
 
   // group create
   const [groupOpen, setGroupOpen] = useState(false);
@@ -102,6 +113,7 @@ export default function ChatClient({
       setShowThread(true);
       setEditOpen(false);
       setReactFor(null);
+      setEmojiOpen(false);
       setOverview((o) => ({ ...o, [id]: { ...o[id], unread: 0 } }));
       markChatReadAction({ chatId: id });
       if (push && typeof window !== "undefined") {
@@ -136,6 +148,16 @@ export default function ChatClient({
     if (c && c !== activeId && chats.some((x) => x.id === c)) openChat(c, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // Close the compose emoji picker on an outside click.
+  useEffect(() => {
+    if (!emojiOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [emojiOpen]);
 
   // ---- polls ----
   const fetchMessages = useCallback(async () => {
@@ -225,6 +247,7 @@ export default function ChatClient({
     const text = input.trim();
     if (!text || !activeId || sending) return;
     setInput("");
+    setEmojiOpen(false);
     setSending(true);
     const optimistic: Msg = { id: `tmp_${Date.now()}`, chatId: activeId, fromUserId: me.id, content: text, createdAt: new Date().toISOString() };
     setPending((prev) => [...prev, optimistic]);
@@ -487,12 +510,15 @@ export default function ChatClient({
                         </div>
                         {!m.id.startsWith("tmp_") && (
                           <div className="react-wrap">
-                            <button className="react-add" type="button" onClick={() => setReactFor(reactFor === m.id ? null : m.id)} title="React">😊</button>
+                            <button className="react-add" type="button" onClick={() => { setReactFor(reactFor === m.id ? null : m.id); setReactExpanded(false); }} title="React">😊</button>
                             {reactFor === m.id && (
-                              <div className="react-pop">
-                                {EMOJIS.map((e) => (
+                              <div className={`react-pop${reactExpanded ? " expanded" : ""}`}>
+                                {(reactExpanded ? ALL_EMOJIS : QUICK_EMOJIS).map((e) => (
                                   <button key={e} type="button" onClick={() => react(m.id, e)}>{e}</button>
                                 ))}
+                                {!reactExpanded && (
+                                  <button type="button" className="more" title="More emojis" onClick={(ev) => { ev.stopPropagation(); setReactExpanded(true); }}>＋</button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -513,6 +539,16 @@ export default function ChatClient({
               </div>
 
               <div className="chat-input">
+                <div className="emoji-wrap" ref={emojiRef}>
+                  <button type="button" className="emoji-btn" onClick={() => setEmojiOpen((v) => !v)} title="Emoji">😊</button>
+                  {emojiOpen && (
+                    <div className="emoji-pop">
+                      {ALL_EMOJIS.map((e) => (
+                        <button key={e} type="button" onClick={() => setInput((s) => s + e)}>{e}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <input placeholder="Message…" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
                 <button className="send" onClick={send} type="button" disabled={sending} title="Send">
                   {sending ? (
