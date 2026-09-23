@@ -251,6 +251,17 @@ button.mnav { border: 0; cursor: pointer; font-family: inherit; }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes sheet-fade { from { opacity: 0; } to { opacity: 1; } }
 
+/* ---------- Post-login check-in prompt ---------- */
+.checkin-prompt { border: 1px solid var(--accent); background: var(--accent-wash); }
+.cip-ic { width: 46px; height: 46px; border-radius: 14px; background: var(--surface); color: var(--accent-ink); display: grid; place-items: center; flex: none; }
+.cip-ic svg { width: 24px; height: 24px; stroke-width: 1.9; }
+
+/* ---------- PWA / notification nudge ---------- */
+.pwa-banner { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 65; width: min(560px, calc(100vw - 28px)); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 14px 44px rgba(16,16,26,.22); animation: sheet-up .3s cubic-bezier(.22,.61,.36,1); }
+.pwa-banner > div:nth-child(2) { min-width: 62%; }
+.pwa-ic { width: 40px; height: 40px; border-radius: 12px; background: var(--accent-wash); display: grid; place-items: center; font-size: 20px; flex: none; }
+@media (max-width: 900px) { .pwa-banner { bottom: calc(74px + env(safe-area-inset-bottom)); } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .05ms !important; }
   .blob { animation: none; }

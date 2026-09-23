@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
 import { todayStr } from "@/lib/db";
 import DashboardTeam from "./DashboardTeam";
+import CheckInPrompt from "./CheckInPrompt";
 import { getToday, listByDate } from "@/lib/attendance";
 import { statusForToday, listApprovedForDate, listPending } from "@/lib/leave";
 import { listForUser as listTasksForUser, toTree } from "@/lib/tasks";
@@ -92,6 +93,8 @@ export default async function DashboardPage() {
 
   return (
     <>
+      {!myAtt?.checkIn && !myLeave.onLeave && <CheckInPrompt wfhApproved={myLeave.wfhApproved} />}
+
       <div className="grid g-4 stagger" style={{ marginBottom: 18 }}>
         <Link href="/attendance" className={`stat ${attTint}`}>
           <div className="ic">

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "@/components/NotificationBell";
+import PwaPrompts from "@/components/PwaPrompts";
 import { isManager, roleLabel } from "@/lib/roles";
 import type { SessionUser } from "@/lib/types";
 
@@ -100,12 +101,14 @@ export default function Shell({ user, children }: { user: SessionUser; children:
   const mainRef = useRef<HTMLDivElement>(null);
 
   // Keep every screen live: soft-refresh server data every 30s (paused when the
-  // tab is hidden). Client state — inputs, open menus — is preserved.
+  // tab is hidden). Client state — inputs, open menus — is preserved. Chat is
+  // excluded: it runs its own 5s message poll, so a page refresh would jar it.
   useEffect(() => {
+    if (pathname === "/chat") return;
     const tick = () => { if (document.visibilityState === "visible") router.refresh(); };
     const t = setInterval(tick, 30000);
     return () => clearInterval(t);
-  }, [router]);
+  }, [router, pathname]);
 
   function refreshNow() {
     setSyncing(true);
@@ -151,18 +154,20 @@ export default function Shell({ user, children }: { user: SessionUser; children:
           <div className="brand-name">Tudo</div>
         </div>
 
-        {sections.map((sec, i) => (
-          <div key={i}>
-            {sec.section && <div className="nav-label">{sec.section}</div>}
-            {sec.items.map((item) => (
-              <Link key={item.href} href={item.href} className={`nav-item${isActive(item.href) ? " active" : ""}`}>
-                {item.icon}
-                <span>{item.label}</span>
-                {item.badge && <span className="nav-badge">{item.badge}</span>}
-              </Link>
-            ))}
-          </div>
-        ))}
+        <div className="side-nav">
+          {sections.map((sec, i) => (
+            <div key={i}>
+              {sec.section && <div className="nav-label">{sec.section}</div>}
+              {sec.items.map((item) => (
+                <Link key={item.href} href={item.href} className={`nav-item${isActive(item.href) ? " active" : ""}`}>
+                  {item.icon}
+                  <span>{item.label}</span>
+                  {item.badge && <span className="nav-badge">{item.badge}</span>}
+                </Link>
+              ))}
+            </div>
+          ))}
+        </div>
 
         <div className="side-user">
           <Link href="/account" className="row" style={{ gap: 10, minWidth: 0, flex: 1, color: "inherit" }} title="Account & password">
@@ -206,6 +211,8 @@ export default function Shell({ user, children }: { user: SessionUser; children:
 
         <main className="canvas">{children}</main>
       </div>
+
+      <PwaPrompts />
 
       <nav className="mobilenav">
         {MOBILE.map((item) => (

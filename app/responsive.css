@@ -13,7 +13,22 @@
 .sidebar {
   height: 100vh;
   height: 100dvh;
+  overflow: hidden; /* the sidebar frame is fixed; only .side-nav scrolls */
+}
+/* Brand stays pinned top, user card pinned bottom, nav scrolls between them. */
+.side-nav {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 -6px; /* let the scrollbar sit at the edge */
+  padding: 0 6px;
+}
+.side-user {
+  margin-top: 10px;
+  flex: none;
 }
 .main {
   height: 100vh;
