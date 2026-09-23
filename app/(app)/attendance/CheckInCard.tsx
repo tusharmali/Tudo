@@ -2,21 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { checkInAction, checkOutAction, type Coords } from "@/app/actions/attendance";
+import { checkInAction, checkOutAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
+import { getCurrentCoords, type Coords } from "@/lib/geo";
 import type { AttRecord } from "@/lib/attendance";
-
-function getPosition(): Promise<Coords> {
-  return new Promise((resolve, reject) => {
-    if (!("geolocation" in navigator)) return reject(new Error("Location isn't available on this device."));
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
-      (err) =>
-        reject(new Error(err.code === 1 ? "Location permission denied — enable it to check in." : "Couldn't get your location.")),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
-    );
-  });
-}
 
 export default function CheckInCard({
   today,
@@ -37,10 +26,10 @@ export default function CheckInCard({
     try {
       let coords: Coords = { lat: 0, lng: 0, accuracy: 0 };
       if (!wfhApproved) {
-        coords = await getPosition();
+        coords = await getCurrentCoords();
       } else {
         try {
-          coords = await getPosition();
+          coords = await getCurrentCoords();
         } catch {
           /* WFH: location is optional */
         }

@@ -2,19 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { checkInAction, type Coords } from "@/app/actions/attendance";
+import { checkInAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
-
-function getPosition(): Promise<Coords> {
-  return new Promise((resolve, reject) => {
-    if (!("geolocation" in navigator)) return reject(new Error("Location isn't available on this device."));
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
-      (err) => reject(new Error(err.code === 1 ? "Allow location access to check in." : "Couldn't get your location.")),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
-    );
-  });
-}
+import { getCurrentCoords, type Coords } from "@/lib/geo";
 
 export default function CheckInPrompt({ wfhApproved }: { wfhApproved: boolean }) {
   const router = useRouter();
@@ -26,10 +16,10 @@ export default function CheckInPrompt({ wfhApproved }: { wfhApproved: boolean })
     setBusy(true);
     try {
       let coords: Coords = { lat: 0, lng: 0, accuracy: 0 };
-      if (!wfhApproved) coords = await getPosition();
+      if (!wfhApproved) coords = await getCurrentCoords();
       else {
         try {
-          coords = await getPosition();
+          coords = await getCurrentCoords();
         } catch {
           /* WFH: location optional */
         }

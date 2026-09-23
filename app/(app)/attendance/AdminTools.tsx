@@ -8,16 +8,7 @@ import { toast } from "@/components/Toaster";
 
 type Pending = { id: string; userName: string; type: string; fromDate: string; toDate: string; reason: string };
 
-function getPosition(): Promise<{ lat: number; lng: number; accuracy: number }> {
-  return new Promise((resolve, reject) => {
-    if (!("geolocation" in navigator)) return reject(new Error("Location isn't available."));
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
-      () => reject(new Error("Couldn't read your location.")),
-      { enableHighAccuracy: true, timeout: 12000 },
-    );
-  });
-}
+import { getCurrentCoords as getPosition } from "@/lib/geo";
 
 export default function AdminTools({
   pending,
