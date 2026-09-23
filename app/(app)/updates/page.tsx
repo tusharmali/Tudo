@@ -1,11 +1,11 @@
 import { getCurrentUser } from "@/lib/auth";
-import { isManager, isDeptAdmin } from "@/lib/roles";
+import { isManager, isDeptAdmin, canPlan as canPlanFn, manageDeptsOf, wipDeptsFor } from "@/lib/roles";
 import { todayStr } from "@/lib/db";
 import { listByDate, listForUser, toTree, type TaskNode } from "@/lib/tasks";
 import { getWip } from "@/lib/wip";
 import { getSettings } from "@/lib/settings";
 import { listUsers } from "@/lib/users";
-import { renderDayPlan, renderUpdates, autoWipSections, parseWipSections } from "@/lib/format";
+import { renderDayPlan, renderUpdates, autoWipSections, parseWipSections, wipFormatForDept, type WipFormat } from "@/lib/format";
 import { aiEnabled } from "@/lib/ai";
 import UpdatesTabs, { type AdminData } from "./UpdatesTabs";
 
@@ -16,7 +16,12 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
   if (!user) return null;
   const isMgr = isManager(user.role);
   const isDeptAdm = isDeptAdmin(user.role);
-  const canPlan = isMgr || isDeptAdm; // managers + department admins can build the day plan
+  const canPlan = canPlanFn(user); // managers, dept admins, or anyone with extra managed depts
+  const managed = new Set(manageDeptsOf(user));
+  const wipFormats = ((): WipFormat[] => {
+    const fmts = [...new Set(wipDeptsFor(user).map(wipFormatForDept))];
+    return fmts.length ? fmts : ["tech"];
+  })();
   const today = todayStr();
   const sp = await searchParams;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date || "") ? (sp.date as string) : today;
@@ -32,8 +37,8 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
   let admin: AdminData | null = null;
   if (canPlan) {
     const [allUsers, allTasks] = await Promise.all([listUsers(), listByDate(date)]);
-    // A department admin only manages their own department.
-    const users = isMgr ? allUsers : allUsers.filter((u) => u.department === user.dept);
+    // A non-manager only manages the departments assigned to them.
+    const users = isMgr ? allUsers : allUsers.filter((u) => managed.has(u.department));
     const tasksByUser: Record<string, TaskNode[]> = {};
     const weekTargets: Record<string, string> = {};
     for (const u of users) {
@@ -69,6 +74,7 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
       isAdmin={isMgr}
       isDeptAdmin={isDeptAdm}
       dept={user.dept}
+      wipFormats={wipFormats}
       date={date}
       today={today}
       myTree={myTree}

@@ -7,6 +7,7 @@ export interface User {
   email: string;
   role: Role;
   department: string;
+  manageDepts: string; // extra departments this user administers the day plan for (comma-sep)
   avatarColor: string;
   avatar: string; // uploaded display picture (data URL), or "" for initials
   phone?: string;
@@ -20,6 +21,7 @@ export interface SessionUser {
   handle: string;
   role: Role;
   dept: string;
+  manageDepts?: string; // extra departments this user administers (comma-sep)
   color: string;
   avatar?: string; // display picture, refreshed from the DB each request
 }

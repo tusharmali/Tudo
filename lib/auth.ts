@@ -46,6 +46,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       handle: fresh.handle,
       role: fresh.role,
       dept: fresh.department,
+      manageDepts: fresh.manageDepts,
       color: fresh.avatarColor,
       avatar: fresh.avatar,
     };

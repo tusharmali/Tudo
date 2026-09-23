@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, requireManager, requireDayPlanEditor } from "@/lib/dal";
-import { isManager } from "@/lib/roles";
+import { isManager, canManageDept, manageDeptsOf } from "@/lib/roles";
 import { allRows, appendRows, genId, todayStr } from "@/lib/db";
 import { listByDate, toTree, createTask, setStatus, setUpdate, removeTask, setWeekTarget } from "@/lib/tasks";
 import { setSetting } from "@/lib/settings";
@@ -17,12 +17,12 @@ import type { WipData } from "@/lib/format";
 const STATUSES = ["pending", "in-progress", "done"];
 const asDate = (d: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d : todayStr());
 
-/** A department admin may only touch their own department; managers, anyone. */
+/** A day-plan editor may only touch the departments they manage; managers, anyone. */
 async function assertDeptScope(actor: SessionUser, targetUserId: string) {
   if (isManager(actor.role)) return;
   const target = await getUserById(targetUserId);
-  if (!target || target.department !== actor.dept) {
-    throw new Error("You can only manage your own department's day plan.");
+  if (!target || !canManageDept(actor, target.department)) {
+    throw new Error("You can only manage the day plan for your department(s).");
   }
 }
 
@@ -166,13 +166,14 @@ export async function copyPreviousDayPlanAction(input: { date: string }): Promis
     const src = priorDates[priorDates.length - 1];
     if (!src) return { ok: false, error: "No earlier day plan found to copy from." };
     let srcTasks = all.filter((t) => t.date === src);
-    // A department admin only copies their own department's tasks.
+    // A non-manager only copies tasks from the departments they manage.
     if (!isManager(admin.role)) {
+      const managed = new Set(manageDeptsOf(admin));
       const users = await listUsers();
-      const deptIds = new Set(users.filter((u) => u.department === admin.dept).map((u) => u.id));
+      const deptIds = new Set(users.filter((u) => managed.has(u.department)).map((u) => u.id));
       srcTasks = srcTasks.filter((t) => deptIds.has(t.userId));
     }
-    if (!srcTasks.length) return { ok: false, error: "The previous plan has no tasks for your department." };
+    if (!srcTasks.length) return { ok: false, error: "The previous plan has no tasks for your department(s)." };
 
     const idMap: Record<string, string> = {};
     for (const t of srcTasks) idMap[t.id] = genId("tk");

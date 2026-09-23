@@ -9,6 +9,7 @@ import {
   setUserRoleAction,
   setUserEmailAction,
   setUserGeoExemptAction,
+  setUserManageDeptsAction,
   setTwofaEnabledAction,
 } from "@/app/actions/team";
 import { resetPasswordAction } from "@/app/actions/account";
@@ -17,7 +18,7 @@ import { toast } from "@/components/Toaster";
 import Avatar, { avatarSrc } from "@/components/Avatar";
 import type { Role } from "@/lib/types";
 
-type Person = { id: string; name: string; email: string; role: Role; department: string; status: string; color: string; avatar: string };
+type Person = { id: string; name: string; email: string; role: Role; department: string; status: string; color: string; avatar: string; manageDepts: string };
 const BASE_DEPTS = ["Leadership", "Tech", "Digi", "Support", "HR"];
 
 const roleClass: Record<string, string> = { superadmin: "p-peri", director: "p-good", hr: "p-sky", deptadmin: "p-warn", employee: "p-neut" };
@@ -101,6 +102,11 @@ export default function PeopleClient({
   }
   function toggleGeo(u: Person) {
     run(`geo:${u.id}`, () => setUserGeoExemptAction({ userId: u.id, exempt: !exemptSet.has(u.id) }));
+  }
+  function toggleManage(u: Person, dept: string) {
+    const cur = (u.manageDepts || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const next = cur.includes(dept) ? cur.filter((x) => x !== dept) : [...cur, dept];
+    run(`md:${u.id}`, () => setUserManageDeptsAction({ userId: u.id, depts: next }));
   }
   function toggle2fa() {
     if (!twofa && !emailReady) return toast("Set up Resend (RESEND_API_KEY) before turning on 2FA");
@@ -225,6 +231,19 @@ export default function PeopleClient({
                         <option value="">— none —</option>
                         {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
                       </select>
+                      {iamSuper && !locked && (
+                        <div className="row" style={{ gap: 4, flexWrap: "wrap", marginTop: 6, maxWidth: 150 }} title="Also manages the day plan for these departments">
+                          <span className="tiny faint" style={{ width: "100%" }}>Also manages:</span>
+                          {deptOptions.filter((d) => d !== u.department).map((d) => {
+                            const on = (u.manageDepts || "").split(",").map((s) => s.trim()).includes(d);
+                            return (
+                              <button key={d} type="button" className={`chip${on ? " chip-on" : ""}`} style={{ padding: "2px 7px", fontSize: 10.5 }} disabled={busy === `md:${u.id}`} onClick={() => toggleManage(u, d)}>
+                                {on ? "✓ " : "+ "}{d}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <span className={`pill ${u.status === "suspended" ? "p-bad" : "p-good"}`}><span className="d" />{u.status === "suspended" ? "Suspended" : "Active"}</span>

@@ -33,6 +33,7 @@ async function mintSession(u: User): Promise<void> {
     handle: u.handle,
     role: u.role,
     dept: u.department,
+    manageDepts: u.manageDepts,
     color: u.avatarColor,
     avatar: u.avatar,
   });

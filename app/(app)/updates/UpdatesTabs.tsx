@@ -9,7 +9,20 @@ import WipComposer from "./WipComposer";
 import DigiWipComposer from "./DigiWipComposer";
 import SupportWipComposer from "./SupportWipComposer";
 import type { TaskNode } from "@/lib/tasks";
-import { wipFormatForDept, type WipSections } from "@/lib/format";
+import { type WipSections, type WipFormat } from "@/lib/format";
+
+const FMT_LABEL: Record<WipFormat, string> = { tech: "Tech", digi: "Digi", support: "Support" };
+
+function savedFormat(raw: string): WipFormat | null {
+  try {
+    const o = JSON.parse(raw) as { format?: WipFormat; worked?: string };
+    if (o?.format) return o.format;
+    if (o && "worked" in o) return "tech";
+  } catch {
+    /* not JSON */
+  }
+  return null;
+}
 
 export interface AdminData {
   users: BuilderUser[];
@@ -24,7 +37,7 @@ export interface AdminData {
 export default function UpdatesTabs({
   isAdmin,
   isDeptAdmin = false,
-  dept = "",
+  wipFormats = ["tech"],
   date,
   today,
   myTree,
@@ -37,6 +50,7 @@ export default function UpdatesTabs({
   isAdmin: boolean;
   isDeptAdmin?: boolean;
   dept?: string;
+  wipFormats?: WipFormat[];
   date: string;
   today: string;
   myTree: TaskNode[];
@@ -46,10 +60,12 @@ export default function UpdatesTabs({
   autoWip: WipSections;
   admin: AdminData | null;
 }) {
-  const canPlan = isAdmin || isDeptAdmin;
+  // A day-plan editor is anyone the server built admin data for.
+  const canPlan = isAdmin || isDeptAdmin || !!admin;
   const tabs = ["My Day", ...(canPlan ? ["Day Plan"] : []), ...(isAdmin ? ["Overall Update"] : []), "WIP"];
   const [tab, setTab] = useState(tabs[0]);
-  const wipFormat = wipFormatForDept(dept);
+  const saved = savedFormat(savedWipRaw);
+  const [wipFmt, setWipFmt] = useState<WipFormat>(saved && wipFormats.includes(saved) ? saved : wipFormats[0]);
 
   return (
     <>
@@ -64,9 +80,22 @@ export default function UpdatesTabs({
       </div>
 
       {tab === "My Day" && <MyDay tree={myTree} weekTarget={myWeekTarget} />}
-      {tab === "WIP" && wipFormat === "digi" && <DigiWipComposer raw={savedWipRaw} date={date} />}
-      {tab === "WIP" && wipFormat === "support" && <SupportWipComposer raw={savedWipRaw} date={date} />}
-      {tab === "WIP" && wipFormat === "tech" && <WipComposer saved={savedWip} auto={autoWip} date={date} />}
+      {tab === "WIP" && (
+        <>
+          {wipFormats.length > 1 && (
+            <div className="seg" style={{ marginBottom: 14, display: "inline-flex" }}>
+              {wipFormats.map((f) => (
+                <button key={f} type="button" className={wipFmt === f ? "on" : ""} onClick={() => setWipFmt(f)}>
+                  {FMT_LABEL[f]} WIP
+                </button>
+              ))}
+            </div>
+          )}
+          {wipFmt === "digi" && <DigiWipComposer raw={savedWipRaw} date={date} />}
+          {wipFmt === "support" && <SupportWipComposer raw={savedWipRaw} date={date} />}
+          {wipFmt === "tech" && <WipComposer saved={savedWip} auto={autoWip} date={date} />}
+        </>
+      )}
       {canPlan && admin && tab === "Day Plan" && (
         <DayPlanBuilder
           users={admin.users}

@@ -18,6 +18,7 @@ function rowToUser(r: Row): User {
     email: (r.email || "").trim().toLowerCase(),
     role: (r.role as Role) || "employee",
     department: r.department || "",
+    manageDepts: r.manageDepts || "",
     avatarColor: r.avatarColor || "#7178DD",
     avatar: r.avatar || "",
     phone: r.phone || "",
@@ -84,6 +85,7 @@ export async function createUser(input: NewUser): Promise<User> {
     email,
     role: input.role,
     department: input.department?.trim() || "",
+    manageDepts: "",
     avatarColor: colorFor(email),
     avatar: "",
     phone: input.phone?.trim() || "",
@@ -98,6 +100,7 @@ export async function createUser(input: NewUser): Promise<User> {
     passwordHash,
     role: user.role,
     department: user.department,
+    manageDepts: "",
     avatarColor: user.avatarColor,
     avatar: "",
     phone: user.phone ?? "",
@@ -136,6 +139,13 @@ export async function setUserRole(userId: string, role: Role): Promise<void> {
 /** Manager: move a user to a department. */
 export async function setUserDepartment(userId: string, department: string): Promise<void> {
   const changed = await updateWhere("Users", (r) => r.id === userId, { department: department.trim() });
+  if (!changed) throw new Error("User not found.");
+}
+
+/** Super-admin: set the extra departments a user administers the day plan for. */
+export async function setUserManageDepts(userId: string, depts: string[]): Promise<void> {
+  const clean = Array.from(new Set(depts.map((d) => d.trim()).filter(Boolean))).join(",");
+  const changed = await updateWhere("Users", (r) => r.id === userId, { manageDepts: clean });
   if (!changed) throw new Error("User not found.");
 }
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireManager, requireAdmin } from "@/lib/dal";
-import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail } from "@/lib/users";
+import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail, setUserManageDepts } from "@/lib/users";
 import { setTwofaEnabled } from "@/lib/twofa";
 import { setGeoExempt } from "@/lib/attendance";
 import { assertCanModify } from "@/lib/owner";
@@ -92,6 +92,22 @@ export async function setUserEmailAction(input: { userId: string; email: string 
     await logAction(me, "People", "Changed login email", `${beforeEmail} → ${input.email}`);
     revalidatePath("/people");
     return { ok: true, message: "Email updated" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setUserManageDeptsAction(input: { userId: string; depts: string[] }): Promise<Res> {
+  try {
+    const me = await requireAdmin(); // granting management powers is super-admin only
+    const target = await getUserById(input.userId);
+    if (!target) return { ok: false, error: "User not found." };
+    await setUserManageDepts(input.userId, input.depts || []);
+    const list = (input.depts || []).join(", ");
+    await logAction(me, "People", "Set managed departments", `${target.name} → ${list || "none"}`);
+    await notifyIfEnabled("people.role", input.userId, "Day-plan access updated", list ? `You can now manage the day plan for: ${list}.` : "Your extra day-plan access was removed.", me.sub, "/updates");
+    revalidatePath("/people");
+    return { ok: true, message: "Managed departments updated" };
   } catch (e) {
     return actionError(e);
   }

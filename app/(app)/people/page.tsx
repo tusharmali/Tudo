@@ -51,6 +51,7 @@ export default async function PeoplePage() {
         status: u.status || "active",
         color: u.avatarColor,
         avatar: u.avatar,
+        manageDepts: u.manageDepts,
       }))}
     />
   );
