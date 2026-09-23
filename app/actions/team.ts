@@ -89,6 +89,19 @@ export async function setUserEmailAction(input: { userId: string; email: string 
 export async function setTwofaEnabledAction(input: { enabled: boolean }): Promise<Res> {
   try {
     await requireAdmin(); // security policy — super-admin only
+    if (input.enabled) {
+      // Guard against locking everyone out: refuse while email can't reach non-owners.
+      if (!process.env.RESEND_API_KEY) {
+        return { ok: false, error: "Set up Resend (RESEND_API_KEY) before enabling 2FA." };
+      }
+      const from = process.env.EMAIL_FROM || "";
+      if (!from || /onboarding@resend\.dev/i.test(from)) {
+        return {
+          ok: false,
+          error: "Verify a domain in Resend and set EMAIL_FROM to an address on it first — the default sender only reaches your own inbox, so everyone else would be locked out.",
+        };
+      }
+    }
     await setTwofaEnabled(input.enabled);
     revalidatePath("/people");
     return { ok: true, message: input.enabled ? "Email 2FA is now required on new logins" : "Email 2FA turned off" };

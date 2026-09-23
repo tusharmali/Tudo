@@ -119,7 +119,8 @@ export default function PeopleClient({
               <h3 className="sec" style={{ marginBottom: 4 }}>Email 2FA {twofa ? <span className="pill p-good" style={{ marginLeft: 6 }}>On</span> : <span className="pill p-neut" style={{ marginLeft: 6 }}>Off</span>}</h3>
               <p className="muted tiny" style={{ margin: 0 }}>
                 When on, new logins need a code emailed to the member. Remembered devices skip it for 30 days.
-                {!emailReady && " (Resend not configured yet.)"}
+                Needs a <b>verified Resend domain</b> + <code>EMAIL_FROM</code> set to it, so codes reach everyone (not just the owner).
+                {!emailReady && " Resend isn't configured yet."}
               </p>
             </div>
             <button className={`btn ${twofa ? "btn-ghost" : "btn-primary"}`} onClick={toggle2fa} disabled={busy === "2fa"} style={{ whiteSpace: "nowrap" }}>
