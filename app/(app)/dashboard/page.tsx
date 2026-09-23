@@ -101,6 +101,30 @@ export default async function DashboardPage() {
     leave = roster.filter((r) => r.state === "leave").length;
   }
 
+  // Quick-access tiles — everything this person can reach, in one place.
+  const tiles: { href: string; label: string; emoji: string }[] = [
+    { href: "/my", label: "My Space", emoji: "📔" },
+    { href: "/updates", label: "Updates & Plan", emoji: "📝" },
+    { href: "/attendance", label: "Attendance", emoji: "📍" },
+    { href: "/calendar", label: "Calendar", emoji: "📅" },
+    { href: "/chat", label: "Chat", emoji: "💬" },
+    { href: "/concerns", label: "Concerns", emoji: "🎫" },
+    { href: "/kudos", label: "Kudos", emoji: "🏆" },
+    ...(canSeeReleases ? [{ href: "/releases", label: "Releases", emoji: "🚀" }] : []),
+    ...(isAdmin || user.dept === "Digi" ? [{ href: "/shoots", label: "Shoots", emoji: "📸" }] : []),
+    ...(isAdmin || user.dept === "Support" ? [{ href: "/milestones", label: "Milestones", emoji: "🎯" }] : []),
+    { href: "/fun", label: "Fun Zone", emoji: "✨" },
+    ...(isAdmin
+      ? [
+          { href: "/people", label: "People", emoji: "👥" },
+          { href: "/expenses", label: "Expenses", emoji: "💸" },
+          { href: "/assets", label: "Assets", emoji: "💻" },
+          { href: "/reports", label: "Reports", emoji: "📊" },
+          { href: "/broadcast", label: "Broadcast", emoji: "📣" },
+        ]
+      : []),
+  ];
+
   return (
     <>
       {!myAtt?.checkIn && !myLeave.onLeave && <CheckInPrompt wfhApproved={myLeave.wfhApproved} locationExempt={myExempt} />}
@@ -187,6 +211,18 @@ export default async function DashboardPage() {
             <div className="d muted">{latestNotif ? latestNotif.title.slice(0, 26) : "All caught up"}</div>
           </Link>
         )}
+      </div>
+
+      <div className="card pad" style={{ marginBottom: 18 }}>
+        <h3 className="sec" style={{ marginBottom: 12 }}>Quick access</h3>
+        <div className="qa-grid">
+          {tiles.map((t) => (
+            <Link key={t.href} href={t.href} className="qa-tile">
+              <span className="qa-emoji">{t.emoji}</span>
+              <span className="qa-label">{t.label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="grid g-2-1">

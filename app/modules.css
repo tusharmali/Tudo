@@ -157,6 +157,13 @@ select.inp { cursor: pointer; }
 /* personal reminders checkbox */
 .chk { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface-2); cursor: pointer; flex: none; display: grid; place-items: center; font-size: 13px; color: #fff; }
 .chk.on { background: var(--good); border-color: var(--good); }
+/* dashboard quick-access tiles */
+.qa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+.qa-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); color: var(--ink); text-decoration: none; transition: .15s; text-align: center; }
+.qa-tile:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.qa-emoji { font-size: 22px; line-height: 1; }
+.qa-label { font-size: 12px; font-weight: 600; }
+@media (max-width: 560px) { .qa-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; } .qa-tile { padding: 11px 5px; } .qa-emoji { font-size: 19px; } .qa-label { font-size: 10.5px; } }
 /* team calendar */
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .cal-head { margin-bottom: 6px; }
