@@ -65,6 +65,7 @@ const NAV: NavSection[] = [
       { href: "/shoots", label: "Shoots & Clients", icon: icons.shoots, depts: ["Digi"] },
       { href: "/milestones", label: "Milestones", icon: icons.milestones, depts: ["Support"] },
       { href: "/kudos", label: "Kudos", icon: icons.kudos },
+      { href: "/calendar", label: "Calendar", icon: icons.calendar },
       { href: "/fun", label: "Fun Zone", icon: icons.fun },
     ],
   },
@@ -73,7 +74,6 @@ const NAV: NavSection[] = [
     adminOnly: true,
     items: [
       { href: "/people", label: "People", icon: icons.people },
-      { href: "/calendar", label: "Calendar", icon: icons.calendar },
       { href: "/expenses", label: "Expenses", icon: icons.wallet },
       { href: "/assets", label: "Assets", icon: icons.assets },
       { href: "/reports", label: "Reports", icon: icons.reports },

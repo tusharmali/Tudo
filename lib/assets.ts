@@ -11,6 +11,7 @@ export interface Asset {
   provider: string;
   assignedTo: string;
   status: string;
+  cost: string; // optional reference price
   purchaseDate: string;
   notes: string;
   createdBy: string;
@@ -35,6 +36,7 @@ export async function addAsset(input: Partial<Asset> & { createdBy: string }): P
     provider: (input.provider || "").trim().slice(0, 120),
     assignedTo: input.assignedTo || "",
     status: ASSET_STATUSES.includes(input.status || "") ? input.status! : "in-use",
+    cost: input.cost ? String(Number(input.cost) || "") : "",
     purchaseDate: /^\d{4}-\d{2}-\d{2}$/.test(input.purchaseDate || "") ? input.purchaseDate! : "",
     notes: (input.notes || "").trim().slice(0, 500),
     createdBy: input.createdBy,
@@ -44,7 +46,7 @@ export async function addAsset(input: Partial<Asset> & { createdBy: string }): P
 }
 
 export async function updateAsset(id: string, patch: Partial<Asset>): Promise<number> {
-  const allowed: (keyof Asset)[] = ["name", "type", "serial", "provider", "assignedTo", "status", "purchaseDate", "notes"];
+  const allowed: (keyof Asset)[] = ["name", "type", "serial", "provider", "assignedTo", "status", "cost", "purchaseDate", "notes"];
   const clean: Record<string, string> = {};
   for (const k of allowed) if (patch[k] !== undefined) clean[k] = String(patch[k]);
   if (!Object.keys(clean).length) return 0;

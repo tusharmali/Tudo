@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
 import { listAllApproved } from "@/lib/leave";
+import { listOverrides } from "@/lib/workcal";
 import { usersMap } from "@/lib/users";
 import CalendarClient from "./CalendarClient";
 
@@ -12,9 +12,14 @@ export const metadata: Metadata = { title: "Calendar" };
 export default async function CalendarPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  if (!isManager(user.role)) redirect("/dashboard");
+  const mgr = isManager(user.role);
 
-  const [leaves, umap] = await Promise.all([listAllApproved(), usersMap()]);
+  // Working-day overrides are for everyone; leave details only for managers.
+  const [leaves, umap, overrides] = await Promise.all([
+    mgr ? listAllApproved() : Promise.resolve([]),
+    usersMap(),
+    listOverrides(),
+  ]);
   const entries = leaves.map((l) => ({
     userId: l.userId,
     name: umap[l.userId]?.name || "Someone",
@@ -26,5 +31,5 @@ export default async function CalendarPage() {
     reason: l.reason,
   }));
 
-  return <CalendarClient entries={entries} />;
+  return <CalendarClient entries={entries} overrides={overrides} isManager={mgr} />;
 }
