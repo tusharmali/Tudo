@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
-import { listAll } from "@/lib/notifications";
+import { listBroadcasts } from "@/lib/notifications";
 import { listUsers } from "@/lib/users";
 import BroadcastClient from "./BroadcastClient";
 
@@ -11,7 +11,7 @@ export default async function BroadcastPage() {
   const user = await getCurrentUser();
   if (!isManager(user?.role)) redirect("/dashboard");
 
-  const [recentAll, users] = await Promise.all([listAll(), listUsers()]);
+  const [recentAll, users] = await Promise.all([listBroadcasts(), listUsers()]);
   const recent = recentAll.slice(0, 10).map((n) => ({
     id: n.id,
     title: n.title,

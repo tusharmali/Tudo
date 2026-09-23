@@ -115,7 +115,7 @@ select.inp { cursor: pointer; }
 .emoji-wrap { position: relative; flex: none; }
 .emoji-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--surface-2); border: 1.5px solid var(--line); font-size: 18px; cursor: pointer; transition: .15s; }
 .emoji-btn:hover { border-color: var(--accent); }
-.emoji-pop { position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 40; width: 272px; max-width: calc(100vw - 40px); max-height: min(46vh, 220px); overflow-y: auto; display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); }
+.emoji-pop { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 40; width: 272px; max-width: calc(100vw - 40px); max-height: min(38vh, 196px); overflow-y: auto; display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); }
 .emoji-pop button { font-size: 19px; padding: 3px; border-radius: 6px; cursor: pointer; transition: transform .1s; }
 .emoji-pop button:hover { background: var(--accent-wash); transform: scale(1.15); }
 /* chat background themes */
@@ -136,6 +136,12 @@ select.inp { cursor: pointer; }
 .theme-sw.sw-sand { background: #efe3cc; }
 .theme-sw.sw-graphite { background: #2b2f3a; }
 .chat-readonly { padding: 14px 18px; border-top: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); font-size: 12.5px; text-align: center; }
+/* skeleton while a chat's messages load */
+.chat-skel { display: flex; flex-direction: column; gap: 12px; width: 100%; padding: 6px 2px; }
+.skel-bubble { height: 34px; border-radius: 14px; background: linear-gradient(90deg, var(--surface-3) 25%, var(--surface-2) 50%, var(--surface-3) 75%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+.skel-bubble.me { align-self: flex-end; border-bottom-right-radius: 5px; }
+.skel-bubble.them { align-self: flex-start; border-bottom-left-radius: 5px; }
+@keyframes shimmer { to { background-position: -200% 0; } }
 .reacts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 1px; }
 .react-chip { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); cursor: pointer; }
 .react-chip.mine { background: var(--accent-wash); border-color: var(--accent); color: var(--accent-ink); }

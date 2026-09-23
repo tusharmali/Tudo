@@ -121,6 +121,7 @@ export default function ChatClient({
   const [muteBusy, setMuteBusy] = useState(false);
 
   const bodyRef = useRef<HTMLDivElement>(null);
+  const reactBusyUntil = useRef(0); // don't let a poll clobber a just-made reaction
   const overviewRef = useRef(overview);
   useEffect(() => {
     overviewRef.current = overview;
@@ -133,6 +134,11 @@ export default function ChatClient({
     (id: string, push = true) => {
       if (!id) return;
       setSeparatorAt(overviewRef.current[id]?.readAt || "");
+      // Clear immediately so the previous chat's messages don't linger.
+      setServer([]);
+      setPending([]);
+      setReactions([]);
+      setLoading(true);
       setActiveId(id);
       setShowThread(true);
       setEditOpen(false);
@@ -198,7 +204,8 @@ export default function ChatClient({
       const d = (await res.json()) as { messages: Msg[]; reactions: Reaction[] };
       const msgs = d.messages || [];
       setServer((prev) => (prev.length === msgs.length && prev[prev.length - 1]?.id === msgs[msgs.length - 1]?.id ? prev : msgs));
-      setReactions(d.reactions || []);
+      // Keep an in-flight optimistic reaction until the write settles.
+      if (Date.now() >= reactBusyUntil.current) setReactions(d.reactions || []);
       const have = new Set(msgs.map(key));
       setPending((prev) => prev.filter((p) => !have.has(key(p))));
     } catch {
@@ -391,14 +398,19 @@ export default function ChatClient({
 
   async function react(messageId: string, emoji: string) {
     setReactFor(null);
+    setReactExpanded(false);
+    reactBusyUntil.current = Date.now() + 3000; // hold optimistic state through the write
     setReactions((prev) => {
       const mine = prev.find((r) => r.messageId === messageId && r.userId === me.id && r.emoji === emoji);
       if (mine) return prev.filter((r) => r !== mine);
       return [...prev, { id: `tmp_${Date.now()}`, messageId, userId: me.id, emoji, createdAt: new Date().toISOString() }];
     });
     const r = await reactMessageAction({ messageId, emoji });
-    if (!r.ok) toast(r.error || "Error");
-    fetchMessages();
+    if (!r.ok) {
+      toast(r.error || "Error");
+      reactBusyUntil.current = 0;
+    }
+    // let the DB settle, then the next poll reconciles (busy window has passed)
   }
 
   function chatAvatar(c: ChatRow, size?: "sm" | "lg") {
@@ -562,8 +574,15 @@ export default function ChatClient({
               )}
 
               <div className={`chat-body theme-${theme}`} ref={bodyRef}>
-                {messages.length === 0 && (
-                  <p className="tiny faint" style={{ margin: "auto" }}>{loading ? "Loading messages…" : "No messages yet — say hi 👋"}</p>
+                {loading && messages.length === 0 && (
+                  <div className="chat-skel">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className={`skel-bubble ${i % 3 === 0 ? "me" : "them"}`} style={{ width: `${45 + ((i * 13) % 40)}%` }} />
+                    ))}
+                  </div>
+                )}
+                {!loading && messages.length === 0 && (
+                  <p className="tiny faint" style={{ margin: "auto" }}>No messages yet — say hi 👋</p>
                 )}
                 {messages.map((m, i) => {
                   const mine = m.fromUserId === me.id;

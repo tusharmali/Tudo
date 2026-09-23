@@ -61,6 +61,12 @@ export async function listForUser(userId: string): Promise<Notification[]> {
   return (await listAll()).filter((n) => n.target === "all" || n.target.split(",").includes(userId));
 }
 
+/** Only actual broadcasts (to everyone or a whole department) — never the
+ *  personal, single-recipient notifications (leave decisions, chat pings, etc.). */
+export async function listBroadcasts(): Promise<Notification[]> {
+  return (await listAll()).filter((n) => n.target === "all" || n.target.includes(","));
+}
+
 export async function getLastRead(userId: string): Promise<string> {
   return getSetting(`notifread:${userId}`);
 }
