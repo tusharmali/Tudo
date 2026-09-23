@@ -14,6 +14,7 @@ export type SheetName =
   | "ConcernReplies"
   | "Chats"
   | "Messages"
+  | "Reactions"
   | "Releases"
   | "FunActivity"
   | "FunContributions"
@@ -36,6 +37,7 @@ export const SCHEMA: Record<SheetName, string[]> = {
   ConcernReplies: ["id", "concernId", "userId", "message", "createdAt"],
   Chats: ["id", "type", "name", "department", "memberIds", "createdBy", "createdAt"],
   Messages: ["id", "chatId", "fromUserId", "content", "createdAt"],
+  Reactions: ["id", "messageId", "userId", "emoji", "createdAt"],
   Releases: ["id", "title", "scheduledDate", "points", "resources", "status", "createdAt"],
   FunActivity: ["id", "title", "isActive", "config", "createdAt"],
   FunContributions: ["id", "activityId", "userId", "content", "createdAt"],

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { isMember, getMessages } from "@/lib/chat";
+import { isMember, getMessages, reactionsForMessageIds, markChatRead } from "@/lib/chat";
 
 export async function GET(req: Request) {
   const u = await getCurrentUser();
@@ -8,12 +8,15 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const chatId = searchParams.get("chatId") || "";
-  const since = searchParams.get("since") || undefined;
-  if (!chatId) return NextResponse.json({ messages: [] });
+  if (!chatId) return NextResponse.json({ messages: [], reactions: [] });
 
   if (!(await isMember(chatId, u.sub))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const messages = await getMessages(chatId, since);
-  return NextResponse.json({ messages });
+  // Full list each poll (chats are small) so reaction changes on older
+  // messages propagate too. Viewing a chat marks it read.
+  const messages = await getMessages(chatId);
+  const reactions = await reactionsForMessageIds(messages.map((m) => m.id));
+  await markChatRead(u.sub, chatId);
+  return NextResponse.json({ messages, reactions });
 }
