@@ -136,7 +136,7 @@ export default function MyClient({ today, tasks, bookmarks, notes }: { today: st
           {tasks.length === 0 ? (
             <p className="tiny faint" style={{ marginTop: 10 }}>Nothing yet — add your first reminder above.</p>
           ) : (
-            <div className="stack" style={{ gap: 6, marginTop: 8 }}>
+            <div className="stack" style={{ gap: 6, marginTop: 8, maxHeight: "46vh", overflowY: "auto" }}>
               {tasks.map((t) => {
                 const done = t.done === "true";
                 const overdue = !done && t.due && t.due < today;
@@ -170,7 +170,7 @@ export default function MyClient({ today, tasks, bookmarks, notes }: { today: st
           {bookmarks.length === 0 ? (
             <p className="tiny faint" style={{ marginTop: 10 }}>No bookmarks yet — save links you want to keep handy.</p>
           ) : (
-            <div className="stack" style={{ gap: 6, marginTop: 8 }}>
+            <div className="stack" style={{ gap: 6, marginTop: 8, maxHeight: "46vh", overflowY: "auto" }}>
               {bookmarks.map((b) => (
                 <div key={b.id} className="row" style={{ gap: 10, padding: "9px 4px", borderBottom: "1px solid var(--line-soft)", alignItems: "flex-start" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
