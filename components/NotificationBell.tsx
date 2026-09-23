@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { markNotificationsReadAction } from "@/app/actions/notifications";
 import { toast } from "./Toaster";
 import PushToggle from "./PushToggle";
 
-type Item = { id: string; title: string; body: string; createdAt: string };
+type Item = { id: string; title: string; body: string; url: string; createdAt: string };
 
 function timeAgo(iso: string): string {
   const then = new Date(iso).getTime();
@@ -18,6 +19,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function NotificationBell() {
+  const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -78,6 +80,11 @@ export default function NotificationBell() {
     }
   }
 
+  function openItem(n: Item) {
+    setOpen(false);
+    router.push(n.url || "/dashboard");
+  }
+
   return (
     <div className="bell-wrap" ref={ref}>
       <button className="icon-btn" onClick={toggle} title="Notifications" type="button">
@@ -99,11 +106,11 @@ export default function NotificationBell() {
               </div>
             )}
             {items.map((n) => (
-              <div className="bell-item" key={n.id}>
+              <button className="bell-item bell-item-btn" key={n.id} type="button" onClick={() => openItem(n)}>
                 <div className="bt">{n.title}</div>
                 {n.body && <div className="bb">{n.body}</div>}
                 <div className="bm">{timeAgo(n.createdAt)}</div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

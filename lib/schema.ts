@@ -39,7 +39,7 @@ export const SCHEMA: Record<SheetName, string[]> = {
   Releases: ["id", "title", "scheduledDate", "points", "resources", "status", "createdAt"],
   FunActivity: ["id", "title", "isActive", "config", "createdAt"],
   FunContributions: ["id", "activityId", "userId", "content", "createdAt"],
-  Notifications: ["id", "title", "body", "target", "createdBy", "createdAt"],
+  Notifications: ["id", "title", "body", "target", "createdBy", "url", "createdAt"],
   PushSubscriptions: ["id", "userId", "endpoint", "p256dh", "auth", "createdAt"],
   Settings: ["key", "value"],
   Kudos: ["id", "fromUserId", "toUserId", "category", "message", "createdAt"],

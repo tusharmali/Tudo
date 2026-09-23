@@ -140,7 +140,7 @@ export async function decideLeaveAction(input: { id: string; decision: "approved
         ? `Your approved ${label} for ${range} was revoked by ${admin.name} — please check in as usual or contact them.`
         : `Your ${label} request for ${range} was declined by ${admin.name}.`;
     if (await isNotifyEnabled("attendance.leave")) {
-      await createNotification(title, body, req.userId, admin.sub);
+      await createNotification(title, body, req.userId, admin.sub, "/attendance");
       await sendToUsers([req.userId], { title, body, url: "/attendance" }).catch(() => {});
     }
     await logAction(admin, "Attendance", revoked ? `Revoked ${label}` : input.decision === "approved" ? `Approved ${label}` : `Rejected ${label}`, `${range}`);

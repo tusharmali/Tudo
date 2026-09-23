@@ -9,16 +9,18 @@ export interface Notification {
   body: string;
   target: string; // "all" or comma-separated userIds
   createdBy: string;
+  url: string; // where clicking the notification takes you
   createdAt: string;
 }
 
-export async function create(title: string, body: string, target: string, createdBy: string): Promise<void> {
+export async function create(title: string, body: string, target: string, createdBy: string, url = ""): Promise<void> {
   await appendRow("Notifications", {
     id: genId("nt"),
     title,
     body,
     target,
     createdBy,
+    url,
     createdAt: new Date().toISOString(),
   });
 }
@@ -26,7 +28,7 @@ export async function create(title: string, body: string, target: string, create
 /** Notify one member — bell entry + push. Never throws into the caller. */
 export async function notifyUser(userId: string, title: string, body: string, createdBy = "system", url = "/dashboard"): Promise<void> {
   try {
-    await create(title, body, userId, createdBy);
+    await create(title, body, userId, createdBy, url);
     await sendToUsers([userId], { title, body, url }).catch(() => {});
   } catch {
     /* a failed notification must not break the action */

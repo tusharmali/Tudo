@@ -25,7 +25,7 @@ export async function pushBroadcastAction(input: { title: string; body: string; 
       targetString = recipientIds.join(",");
     }
 
-    await create(title || "Announcement", body, targetString, admin.sub);
+    await create(title || "Announcement", body, targetString, admin.sub, "/dashboard");
     const payload = { title: title || "Tudo", body, url: "/dashboard" };
     if (dept) await sendToUsers(recipientIds, payload).catch(() => {});
     else await sendToAll(payload).catch(() => {});
