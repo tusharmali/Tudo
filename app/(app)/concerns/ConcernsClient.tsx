@@ -56,6 +56,8 @@ export default function ConcernsClient({
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyReply, setBusyReply] = useState(false);
+  const [busyResolve, setBusyResolve] = useState(false);
 
   const selected = concerns.find((c) => c.id === view) || null;
 
@@ -76,21 +78,25 @@ export default function ConcernsClient({
   }
 
   async function sendReply() {
-    if (!reply.trim()) return;
+    if (!reply.trim() || busyReply) return;
+    setBusyReply(true);
     const r = await replyConcernAction({ concernId: view, message: reply });
     if (r.ok) {
       setReply("");
       router.refresh();
     } else toast(r.error || "Error");
+    setBusyReply(false);
   }
 
   async function toggleResolve() {
-    if (!selected) return;
+    if (!selected || busyResolve) return;
+    setBusyResolve(true);
     const r = await resolveConcernAction({ concernId: selected.id, resolved: selected.status !== "resolved" });
     if (r.ok) {
       toast(r.message || "Done");
       router.refresh();
     } else toast(r.error || "Error");
+    setBusyResolve(false);
   }
 
   return (
@@ -153,8 +159,8 @@ export default function ConcernsClient({
           <>
             <div className="between" style={{ marginBottom: 4 }}>
               <h3 className="sec">{selected.subject}</h3>
-              <button className="btn btn-ghost" style={{ padding: "7px 12px", fontSize: 12.5 }} onClick={toggleResolve}>
-                {selected.status === "resolved" ? "Reopen" : "Mark resolved"}
+              <button className="btn btn-ghost" style={{ padding: "7px 12px", fontSize: 12.5 }} onClick={toggleResolve} disabled={busyResolve}>
+                {busyResolve ? "Saving…" : selected.status === "resolved" ? "Reopen" : "Mark resolved"}
               </button>
             </div>
             <div className="tiny faint" style={{ marginBottom: 14 }}>
@@ -173,11 +179,12 @@ export default function ConcernsClient({
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") sendReply();
+                  if (e.key === "Enter" && !busyReply) sendReply();
                 }}
+                disabled={busyReply}
               />
-              <button className="btn btn-primary" onClick={sendReply}>
-                Reply
+              <button className="btn btn-primary" onClick={sendReply} disabled={busyReply || !reply.trim()} style={{ minWidth: 88 }}>
+                {busyReply ? "Sending…" : "Reply"}
               </button>
             </div>
           </>
