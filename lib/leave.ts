@@ -58,6 +58,11 @@ export async function listUpcomingApproved(date = todayStr()): Promise<LeaveReq[
   return (await all()).filter((r) => r.status === "approved" && (r.toDate || r.fromDate) >= date);
 }
 
+/** Every approved leave / WFH — for the team calendar. */
+export async function listAllApproved(): Promise<LeaveReq[]> {
+  return (await all()).filter((r) => r.status === "approved");
+}
+
 export async function listApprovedForDate(date = todayStr()): Promise<LeaveReq[]> {
   return (await all()).filter(
     (r) => r.status === "approved" && r.fromDate <= date && date <= (r.toDate || r.fromDate),

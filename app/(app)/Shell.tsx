@@ -38,6 +38,9 @@ const icons = {
   logs: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M9 5h9M9 12h9M9 19h9M4.5 5h.01M4.5 12h.01M4.5 19h.01" />),
   refresh: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 0 0 6 5.3L4 8M4 15a8 8 0 0 0 14 3.7l2-2.7" />),
   myspace: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1ZM9 9h6M9 12h4" />),
+  calendar: svg(<><rect x="3" y="5" width="18" height="16" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18M8 3v4M16 3v4" /></>),
+  wallet: svg(<><rect x="3" y="6" width="18" height="13" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M16 14h2" /></>),
+  assets: svg(<><rect x="3" y="4" width="18" height="12" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 20h8M12 16v4" /></>),
 };
 
 type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[]; ownerOnly?: boolean };
@@ -70,6 +73,9 @@ const NAV: NavSection[] = [
     adminOnly: true,
     items: [
       { href: "/people", label: "People", icon: icons.people },
+      { href: "/calendar", label: "Calendar", icon: icons.calendar },
+      { href: "/expenses", label: "Expenses", icon: icons.wallet },
+      { href: "/assets", label: "Assets", icon: icons.assets },
       { href: "/reports", label: "Reports", icon: icons.reports },
       { href: "/logs", label: "Activity Log", icon: icons.logs },
       { href: "/broadcast", label: "Broadcast", icon: icons.broadcast },

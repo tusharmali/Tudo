@@ -157,6 +157,29 @@ select.inp { cursor: pointer; }
 /* personal reminders checkbox */
 .chk { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface-2); cursor: pointer; flex: none; display: grid; place-items: center; font-size: 13px; color: #fff; }
 .chk.on { background: var(--good); border-color: var(--good); }
+/* team calendar */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-head { margin-bottom: 6px; }
+.cal-dow { text-align: center; font-size: 11px; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; }
+.cal-cell { min-height: 74px; border: 1px solid var(--line); border-radius: 10px; padding: 5px; text-align: left; background: var(--surface); cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: .12s; }
+.cal-cell:hover { border-color: var(--accent); }
+.cal-cell.empty { border: none; background: none; cursor: default; }
+.cal-cell.today { border-color: var(--accent); background: var(--accent-wash); }
+.cal-cell.sel { box-shadow: 0 0 0 2px var(--accent); }
+.cal-num { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.cal-people { display: flex; flex-wrap: wrap; gap: 2px; }
+.cal-av { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 8.5px; font-weight: 700; display: grid; place-items: center; font-family: var(--round); flex: none; }
+.cal-av.wfh { box-shadow: 0 0 0 2px var(--sky, #5CA0DE); }
+.cal-more { font-size: 10px; color: var(--ink-faint); align-self: center; }
+.cal-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+.cal-dot.leave { background: var(--bad); }
+.cal-dot.wfh { background: var(--sky, #5CA0DE); }
+@media (max-width: 700px) {
+  .cal-grid { gap: 3px; }
+  .cal-cell { min-height: 54px; padding: 3px; border-radius: 8px; }
+  .cal-av { width: 15px; height: 15px; font-size: 7px; }
+  .cal-num { font-size: 10.5px; }
+}
 /* who-reacted popover */
 .who-pop { z-index: 45; width: 240px; max-width: calc(100vw - 24px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); overflow: hidden; }
 .who-head { padding: 9px 12px; font-weight: 700; font-size: 12.5px; border-bottom: 1px solid var(--line); font-family: var(--round); }
