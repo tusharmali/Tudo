@@ -33,12 +33,61 @@ type UserLite = { id: string; name: string };
 type NameInfo = { name: string; color: string; avatar: string };
 type Overview = { chatId: string; lastText: string; lastAt: string; lastFrom: string; unread: number; readAt: string; muted: boolean; readOnly: boolean };
 
+type PopPos = { top: number; left: number; flip: boolean };
+/** Position a floating popover in viewport coords so it escapes any scroll/
+ *  overflow container and never gets cropped (desktop or mobile). */
+function anchorPop(el: HTMLElement, width = 280): PopPos {
+  const r = el.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const flip = r.top < 230; // near the top → open downward instead of up
+  const left = Math.max(8, Math.min(r.left, vw - width - 8));
+  const top = flip ? r.bottom + 6 : r.top - 6;
+  return { top, left, flip };
+}
+
 const SmileyIcon = ({ s = 18 }: { s?: number }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: s, height: s, strokeWidth: 1.9 }}>
     <circle cx="12" cy="12" r="9.2" />
     <path strokeLinecap="round" d="M8.6 10h.01M15.4 10h.01M8.4 14.4c1 1 2.2 1.5 3.6 1.5s2.6-.5 3.6-1.5" />
   </svg>
 );
+
+function MemberPicker({
+  users,
+  selected,
+  onToggle,
+  names,
+  placeholder = "Search people to add…",
+}: {
+  users: UserLite[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  names: Record<string, NameInfo>;
+  placeholder?: string;
+}) {
+  const [q, setQ] = useState("");
+  const ql = q.trim().toLowerCase();
+  const list = users.filter((u) => !ql || u.name.toLowerCase().includes(ql));
+  return (
+    <div className="mpick">
+      <input className="inp" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="mpick-list">
+        {list.map((u) => {
+          const on = selected.includes(u.id);
+          const info = names[u.id];
+          return (
+            <button key={u.id} type="button" className={`mpick-row${on ? " on" : ""}`} onClick={() => onToggle(u.id)}>
+              <Avatar name={u.name} color={info?.color} src={avatarSrc({ id: u.id, avatar: info?.avatar })} size="sm" />
+              <span className="mpick-name">{u.name}</span>
+              <span className={`mpick-check${on ? " on" : ""}`}>{on ? "✓" : "+"}</span>
+            </button>
+          );
+        })}
+        {list.length === 0 && <div className="tiny faint" style={{ padding: 14, textAlign: "center" }}>No matches</div>}
+      </div>
+    </div>
+  );
+}
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "🙏", "🔥", "👏"];
 const ALL_EMOJIS = [
@@ -103,7 +152,9 @@ export default function ChatClient({
   const [separatorAt, setSeparatorAt] = useState("");
   const [reactFor, setReactFor] = useState<string | null>(null);
   const [reactExpanded, setReactExpanded] = useState(false);
+  const [reactPos, setReactPos] = useState<PopPos | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [emojiPos, setEmojiPos] = useState<PopPos | null>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
 
   // group create
@@ -449,18 +500,14 @@ export default function ChatClient({
             <input className="inp" placeholder="Group name (e.g. Dev Team)" value={gName} onChange={(e) => setGName(e.target.value)} />
             <input className="inp" placeholder="Department (optional)" value={gDept} onChange={(e) => setGDept(e.target.value)} />
           </div>
-          <label className="lbl">Members</label>
-          <div className="row" style={{ flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-            {allUsers.filter((u) => u.id !== me.id).map((u) => {
-              const on = gMembers.includes(u.id);
-              return (
-                <button key={u.id} type="button" className={`chip${on ? " chip-on" : ""}`} onClick={() => setGMembers((m) => (on ? m.filter((x) => x !== u.id) : [...m, u.id]))}>
-                  {on ? "✓ " : ""}{u.name}
-                </button>
-              );
-            })}
-          </div>
-          <button className="btn btn-primary" onClick={createGroup} disabled={creating}>
+          <label className="lbl">Members ({gMembers.length} selected)</label>
+          <MemberPicker
+            users={allUsers.filter((u) => u.id !== me.id)}
+            selected={gMembers}
+            names={names}
+            onToggle={(id) => setGMembers((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id]))}
+          />
+          <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={createGroup} disabled={creating}>
             {creating ? "Creating…" : "Create group"}
           </button>
         </div>
@@ -553,27 +600,38 @@ export default function ChatClient({
                   </div>
                   <label className="lbl">Name</label>
                   <input className="inp" value={eName} onChange={(e) => setEName(e.target.value)} style={{ marginBottom: 12 }} />
-                  <label className="lbl">Members</label>
-                  <div className="row" style={{ flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                    {allUsers.map((u) => {
-                      const on = eMembers.includes(u.id);
-                      const isCreator = u.id === active.createdBy;
+                  <label className="lbl">Participants ({eMembers.length})</label>
+                  <div className="mpick-list" style={{ marginBottom: 14 }}>
+                    {eMembers.map((id) => {
+                      const info = names[id];
+                      const isCreator = id === active.createdBy;
                       return (
-                        <button key={u.id} type="button" className={`chip${on ? " chip-on" : ""}`} disabled={isCreator}
-                          onClick={() => setEMembers((m) => (on ? m.filter((x) => x !== u.id) : [...m, u.id]))}
-                          title={isCreator ? "Group creator" : ""}>
-                          {on ? "✓ " : ""}{u.name}{isCreator ? " ·owner" : ""}
-                        </button>
+                        <div key={id} className="mpick-row" style={{ cursor: "default" }}>
+                          <Avatar name={info?.name || "?"} color={info?.color} src={avatarSrc({ id, avatar: info?.avatar })} size="sm" />
+                          <span className="mpick-name">{info?.name || id}{id === me.id ? " (you)" : ""}</span>
+                          {isCreator ? (
+                            <span className="pill p-peri" style={{ fontSize: 10 }}>Admin</span>
+                          ) : (
+                            <button type="button" className="mpick-x" title="Remove from group" onClick={() => setEMembers((m) => m.filter((x) => x !== id))}>✕</button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
-                  <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>
+                  <label className="lbl">Add people</label>
+                  <MemberPicker
+                    users={allUsers.filter((u) => !eMembers.includes(u.id))}
+                    selected={[]}
+                    names={names}
+                    onToggle={(uid) => setEMembers((m) => (m.includes(uid) ? m : [...m, uid]))}
+                  />
+                  <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={saveEdit} disabled={savingEdit}>
                     {savingEdit ? "Saving…" : "Save changes"}
                   </button>
                 </div>
               )}
 
-              <div className={`chat-body theme-${theme}`} ref={bodyRef}>
+              <div className={`chat-body theme-${theme}`} ref={bodyRef} onScroll={() => { if (reactFor) { setReactFor(null); setReactExpanded(false); } }}>
                 {loading && messages.length === 0 && (
                   <div className="chat-skel">
                     {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -600,9 +658,24 @@ export default function ChatClient({
                         </div>
                         {!m.id.startsWith("tmp_") && !readOnly && (
                           <div className="react-wrap">
-                            <button className="react-add" type="button" onClick={() => { setReactFor(reactFor === m.id ? null : m.id); setReactExpanded(false); }} title="React"><SmileyIcon s={15} /></button>
-                            {reactFor === m.id && (
-                              <div className={`react-pop${reactExpanded ? " expanded" : ""}`}>
+                            <button
+                              className="react-add"
+                              type="button"
+                              onClick={(e) => {
+                                if (reactFor === m.id) { setReactFor(null); return; }
+                                setReactPos(anchorPop(e.currentTarget, 288));
+                                setReactExpanded(false);
+                                setReactFor(m.id);
+                              }}
+                              title="React"
+                            >
+                              <SmileyIcon s={15} />
+                            </button>
+                            {reactFor === m.id && reactPos && (
+                              <div
+                                className={`react-pop${reactExpanded ? " expanded" : ""}`}
+                                style={{ position: "fixed", top: reactPos.top, left: reactPos.left, bottom: "auto", right: "auto", transform: reactPos.flip ? "none" : "translateY(-100%)" }}
+                              >
                                 {(reactExpanded ? ALL_EMOJIS : QUICK_EMOJIS).map((e) => (
                                   <button key={e} type="button" onClick={() => react(m.id, e)}>{e}</button>
                                 ))}
@@ -633,9 +706,9 @@ export default function ChatClient({
               ) : (
                 <div className="chat-input">
                   <div className="emoji-wrap" ref={emojiRef}>
-                    <button type="button" className="emoji-btn" onClick={() => setEmojiOpen((v) => !v)} title="Emoji"><SmileyIcon s={19} /></button>
-                    {emojiOpen && (
-                      <div className="emoji-pop">
+                    <button type="button" className="emoji-btn" onClick={(e) => { if (emojiOpen) { setEmojiOpen(false); } else { setEmojiPos(anchorPop(e.currentTarget, 288)); setEmojiOpen(true); } }} title="Emoji"><SmileyIcon s={19} /></button>
+                    {emojiOpen && emojiPos && (
+                      <div className="emoji-pop" style={{ position: "fixed", top: emojiPos.top, left: emojiPos.left, bottom: "auto", transform: emojiPos.flip ? "none" : "translateY(-100%)" }}>
                         {ALL_EMOJIS.map((e) => (
                           <button key={e} type="button" onClick={() => setInput((s) => s + e)}>{e}</button>
                         ))}
