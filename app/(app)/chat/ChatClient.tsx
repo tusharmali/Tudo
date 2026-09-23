@@ -39,7 +39,9 @@ type PopPos = { top: number; left: number; flip: boolean };
 function anchorPop(el: HTMLElement, width = 280): PopPos {
   const r = el.getBoundingClientRect();
   const vw = window.innerWidth;
-  const flip = r.top < 230; // near the top → open downward instead of up
+  const vh = window.innerHeight;
+  // Open downward when there isn't clearly room above (keeps it off the header).
+  const flip = r.top < 150 && vh - r.bottom > r.top;
   const left = Math.max(8, Math.min(r.left, vw - width - 8));
   const top = flip ? r.bottom + 6 : r.top - 6;
   return { top, left, flip };
