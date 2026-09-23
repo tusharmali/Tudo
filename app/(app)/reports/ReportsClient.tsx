@@ -24,6 +24,33 @@ export default function ReportsClient({
 }) {
   const router = useRouter();
   const [dept, setDept] = useState("all");
+  const [period, setPeriod] = useState("month");
+  const [customFrom, setCustomFrom] = useState(today.slice(0, 8) + "01");
+  const [customTo, setCustomTo] = useState(today);
+
+  function periodRange(p: string): { from: string; to: string } {
+    const now = new Date(today + "T00:00:00Z");
+    const y = now.getUTCFullYear(), m = now.getUTCMonth();
+    const iso = (dt: Date) => dt.toISOString().slice(0, 10);
+    if (p === "month") return { from: `${today.slice(0, 7)}-01`, to: today };
+    if (p === "lastmonth") return { from: iso(new Date(Date.UTC(y, m - 1, 1))), to: iso(new Date(Date.UTC(y, m, 0))) };
+    if (p === "quarter") return { from: iso(new Date(Date.UTC(y, m - 2, 1))), to: today };
+    if (p === "year") return { from: `${y}-01-01`, to: today };
+    return { from: customFrom, to: customTo };
+  }
+
+  function downloadCsv() {
+    const { from, to } = periodRange(period);
+    if (!from || !to || from > to) return;
+    const url = `/api/reports/export?from=${from}&to=${to}&dept=${encodeURIComponent(dept)}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  const PERIODS: [string, string][] = [["month", "This month"], ["lastmonth", "Last month"], ["quarter", "Last 3 months"], ["year", "This year"], ["custom", "Custom"]];
 
   const departments = useMemo(() => [...new Set(rows.map((r) => r.department))].sort(), [rows]);
   const view = dept === "all" ? rows : rows.filter((r) => r.department === dept);
@@ -59,6 +86,32 @@ export default function ReportsClient({
             {departments.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
+      </div>
+
+      <div className="card pad" style={{ marginBottom: 18 }}>
+        <div className="between" style={{ gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+          <div>
+            <h3 className="sec" style={{ margin: 0 }}>Export attendance CSV</h3>
+            <p className="muted tiny" style={{ margin: "3px 0 0" }}>
+              Analytics (present / WFH / leave / late / attendance %) for <b>{dept === "all" ? "all departments" : dept}</b> — pick a timeframe.
+            </p>
+          </div>
+        </div>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          {PERIODS.map(([k, label]) => (
+            <button key={k} type="button" className="chip" style={period === k ? { borderColor: "var(--accent)", background: "var(--accent-wash)", color: "var(--accent-ink)" } : undefined} onClick={() => setPeriod(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {period === "custom" && (
+          <div className="row" style={{ gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <input className="inp" type="date" value={customFrom} max={today} onChange={(e) => setCustomFrom(e.target.value)} style={{ width: 165 }} />
+            <span className="tiny muted">to</span>
+            <input className="inp" type="date" value={customTo} max={today} onChange={(e) => setCustomTo(e.target.value)} style={{ width: 165 }} />
+          </div>
+        )}
+        <button className="btn btn-primary" onClick={downloadCsv}>⬇ Download CSV</button>
       </div>
 
       <div className="grid g-4 stagger" style={{ marginBottom: 18 }}>
