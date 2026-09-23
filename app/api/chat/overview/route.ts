@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { overviewFor } from "@/lib/chat";
+import { chatViewFor } from "@/lib/chat-view";
 
-/** Per-chat summary for the conversation list — last message, unread, mute. */
+/** Live conversation list + per-chat summary (unread, last message, mute).
+ *  Returning the chat list too lets newly-added groups / new DMs appear
+ *  without a page reload. */
 export async function GET() {
   const u = await getCurrentUser();
-  if (!u) return NextResponse.json({ overview: {} }, { status: 401 });
-  return NextResponse.json({ overview: await overviewFor(u.sub) });
+  if (!u) return NextResponse.json({ overview: {}, chats: [] }, { status: 401 });
+  const { chats, overview } = await chatViewFor(u);
+  return NextResponse.json({ overview, chats });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   sendMessageAction,
   ensureDmAction,
@@ -21,6 +21,13 @@ type Reaction = { id: string; messageId: string; userId: string; emoji: string; 
 type UserLite = { id: string; name: string };
 type NameInfo = { name: string; color: string; avatar: string };
 type Overview = { chatId: string; lastText: string; lastAt: string; lastFrom: string; unread: number; readAt: string; muted: boolean };
+
+const SmileyIcon = ({ s = 18 }: { s?: number }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: s, height: s, strokeWidth: 1.9 }}>
+    <circle cx="12" cy="12" r="9.2" />
+    <path strokeLinecap="round" d="M8.6 10h.01M15.4 10h.01M8.4 14.4c1 1 2.2 1.5 3.6 1.5s2.6-.5 3.6-1.5" />
+  </svg>
+);
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "🙏", "🔥", "👏"];
 const ALL_EMOJIS = [
@@ -50,7 +57,7 @@ const key = (m: { fromUserId: string; content: string }) => `${m.fromUserId} ${m
 
 export default function ChatClient({
   me,
-  chats,
+  chats: chatsInit,
   users,
   allUsers,
   names,
@@ -65,8 +72,8 @@ export default function ChatClient({
   overview: Record<string, Overview>;
   isAdmin: boolean;
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const [chats, setChats] = useState(chatsInit);
   const [overview, setOverview] = useState(overviewInit);
   const [activeId, setActiveId] = useState("");
   const [server, setServer] = useState<Msg[]>([]);
@@ -149,15 +156,20 @@ export default function ChatClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Close the compose emoji picker on an outside click.
+  // Close the emoji / reaction pickers on an outside click.
   useEffect(() => {
-    if (!emojiOpen) return;
+    if (!emojiOpen && !reactFor) return;
     function onDoc(e: MouseEvent) {
-      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiOpen(false);
+      const t = e.target as Element;
+      if (emojiOpen && emojiRef.current && !emojiRef.current.contains(t)) setEmojiOpen(false);
+      if (reactFor && !(t.closest && t.closest(".react-wrap"))) {
+        setReactFor(null);
+        setReactExpanded(false);
+      }
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [emojiOpen]);
+  }, [emojiOpen, reactFor]);
 
   // ---- polls ----
   const fetchMessages = useCallback(async () => {
@@ -195,11 +207,11 @@ export default function ChatClient({
     try {
       const res = await fetch("/api/chat/overview", { cache: "no-store" });
       if (!res.ok) return;
-      const d = (await res.json()) as { overview: Record<string, Overview> };
-      setOverview((prev) => {
-        // keep the active chat's unread at 0 (we're viewing it)
+      const d = (await res.json()) as { overview: Record<string, Overview>; chats: ChatRow[] };
+      if (Array.isArray(d.chats)) setChats(d.chats); // new groups / DMs appear live
+      setOverview(() => {
         const next = d.overview || {};
-        if (activeId && next[activeId]) next[activeId] = { ...next[activeId], unread: 0 };
+        if (activeId && next[activeId]) next[activeId] = { ...next[activeId], unread: 0 }; // we're viewing it
         return next;
       });
     } catch {
@@ -264,7 +276,7 @@ export default function ChatClient({
     if (!otherId) return;
     const r = await ensureDmAction({ otherId });
     if (r.ok && r.data) {
-      router.refresh();
+      await refreshOverview();
       openChat(r.data);
     } else toast(r.error || "Error");
   }
@@ -282,7 +294,7 @@ export default function ChatClient({
       setGName("");
       setGDept("");
       setGMembers([]);
-      router.refresh();
+      await refreshOverview();
       openChat(r.data);
     } else toast(r.error || "Error");
     setCreating(false);
@@ -321,7 +333,7 @@ export default function ChatClient({
     if (ok) {
       toast("Group updated");
       setEditOpen(false);
-      router.refresh();
+      refreshOverview();
     }
     setSavingEdit(false);
   }
@@ -510,7 +522,7 @@ export default function ChatClient({
                         </div>
                         {!m.id.startsWith("tmp_") && (
                           <div className="react-wrap">
-                            <button className="react-add" type="button" onClick={() => { setReactFor(reactFor === m.id ? null : m.id); setReactExpanded(false); }} title="React">😊</button>
+                            <button className="react-add" type="button" onClick={() => { setReactFor(reactFor === m.id ? null : m.id); setReactExpanded(false); }} title="React"><SmileyIcon s={15} /></button>
                             {reactFor === m.id && (
                               <div className={`react-pop${reactExpanded ? " expanded" : ""}`}>
                                 {(reactExpanded ? ALL_EMOJIS : QUICK_EMOJIS).map((e) => (
@@ -540,7 +552,7 @@ export default function ChatClient({
 
               <div className="chat-input">
                 <div className="emoji-wrap" ref={emojiRef}>
-                  <button type="button" className="emoji-btn" onClick={() => setEmojiOpen((v) => !v)} title="Emoji">😊</button>
+                  <button type="button" className="emoji-btn" onClick={() => setEmojiOpen((v) => !v)} title="Emoji"><SmileyIcon s={19} /></button>
                   {emojiOpen && (
                     <div className="emoji-pop">
                       {ALL_EMOJIS.map((e) => (
