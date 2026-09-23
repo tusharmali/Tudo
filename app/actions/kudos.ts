@@ -7,7 +7,7 @@ import { isManager } from "@/lib/roles";
 import { giveKudo, getKudo, removeKudo } from "@/lib/kudos";
 import { actionError, type Res } from "@/lib/action";
 import { logAction } from "@/lib/audit";
-import { notifyUser } from "@/lib/notifications";
+import { notifyIfEnabled } from "@/lib/notifications";
 
 export async function giveKudosAction(input: { toUserId: string; category: string; message: string }): Promise<Res> {
   try {
@@ -22,7 +22,7 @@ export async function giveKudosAction(input: { toUserId: string; category: strin
     }
     await giveKudo(u.sub, input.toUserId, input.category || "team-player", input.message.trim().slice(0, 500));
     await logAction(u, "Kudos", "Gave kudos", `to ${to.name}`);
-    await notifyUser(input.toUserId, "You received kudos 🎉", `${u.name} recognised you: ${input.message.trim().slice(0, 120)}`, u.sub, "/kudos");
+    await notifyIfEnabled("kudos.received", input.toUserId, "You received kudos 🎉", `${u.name} recognised you: ${input.message.trim().slice(0, 120)}`, u.sub, "/kudos");
     revalidatePath("/kudos");
     revalidatePath("/dashboard");
     return { ok: true, message: `Kudos sent to ${to.name} 🎉` };

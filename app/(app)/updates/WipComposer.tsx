@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { saveWipAction } from "@/app/actions/updates";
-import { renderWip, type WipSections } from "@/lib/format";
+import { renderWip, EMPTY_WIP, type WipSections } from "@/lib/format";
 import { toast } from "@/components/Toaster";
 import CopyButton from "@/components/CopyButton";
 
@@ -14,12 +14,15 @@ const FIELDS: { key: keyof WipSections; label: string; ph: string }[] = [
 ];
 
 export default function WipComposer({ saved, auto, date }: { saved: WipSections | null; auto: WipSections; date: string }) {
-  const [s, setS] = useState<WipSections>(saved || auto);
+  // Testers write their WIP manually — start from what they saved, or blank
+  // (never auto-filled from tasks). The "Rebuild from tasks" button stays for
+  // anyone who wants to pull the day's tasks in.
+  const [s, setS] = useState<WipSections>(saved || EMPTY_WIP);
   const [busy, setBusy] = useState(false);
 
   // Reset when the day changes.
   useEffect(() => {
-    setS(saved || auto);
+    setS(saved || EMPTY_WIP);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
@@ -27,7 +30,7 @@ export default function WipComposer({ saved, auto, date }: { saved: WipSections 
 
   async function save() {
     setBusy(true);
-    const r = await saveWipAction({ date, sections: s });
+    const r = await saveWipAction({ date, data: { format: "tech", ...s } });
     if (r.ok) toast(r.message || "Saved");
     else toast(r.error || "Error");
     setBusy(false);

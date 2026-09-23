@@ -5,6 +5,7 @@ import { getAttConfig, officeIsSet, getToday, listByDate, isGeoExempt, type AttR
 import { statusForToday, listForUser, listPending, listApprovedForDate, listUpcomingApproved } from "@/lib/leave";
 import type { User } from "@/lib/types";
 import { todayStr } from "@/lib/db";
+import Avatar, { avatarSrc } from "@/components/Avatar";
 import CheckInCard from "./CheckInCard";
 import LeaveForm from "./LeaveForm";
 import AdminTools from "./AdminTools";
@@ -13,10 +14,6 @@ import AttendanceEditCell from "./AttendanceEditCell";
 export const dynamic = "force-dynamic";
 
 type RosterRow = { u: User; rec: AttRecord | undefined; label: string; cls: string };
-
-function initials(n: string): string {
-  return n.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
 
 export default async function AttendancePage() {
   const user = await getCurrentUser();
@@ -112,9 +109,7 @@ export default async function AttendancePage() {
                     <tr key={u.id}>
                       <td>
                         <div className="row">
-                          <div className="avatar sm" style={{ background: u.avatarColor }}>
-                            {initials(u.name)}
-                          </div>
+                          <Avatar name={u.name} color={u.avatarColor} src={avatarSrc(u)} size="sm" />
                           {u.name}
                         </div>
                       </td>

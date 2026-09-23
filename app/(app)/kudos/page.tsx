@@ -35,7 +35,7 @@ export default async function KudosPage() {
   const counts: Record<string, number> = {};
   for (const k of visible) counts[k.toUserId] = (counts[k.toUserId] || 0) + 1;
   const leaderboard = Object.entries(counts)
-    .map(([id, n]) => ({ name: umap[id]?.name || "Someone", color: umap[id]?.avatarColor || "#7178DD", count: n }))
+    .map(([id, n]) => ({ id, name: umap[id]?.name || "Someone", color: umap[id]?.avatarColor || "#7178DD", avatar: umap[id]?.avatar || "", count: n }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 6);
 

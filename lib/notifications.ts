@@ -1,6 +1,7 @@
 import { allRows, appendRow, deleteWhere, genId } from "./db";
 import { getSetting, setSetting } from "./settings";
 import { sendToUsers } from "./push";
+import { isNotifyEnabled } from "./notify-prefs";
 
 export interface Notification {
   id: string;
@@ -30,6 +31,23 @@ export async function notifyUser(userId: string, title: string, body: string, cr
   } catch {
     /* a failed notification must not break the action */
   }
+}
+
+/** Notify only if managers have this action's notification switched on. */
+export async function notifyIfEnabled(
+  key: string,
+  userId: string,
+  title: string,
+  body: string,
+  createdBy = "system",
+  url = "/dashboard",
+): Promise<void> {
+  try {
+    if (!(await isNotifyEnabled(key))) return;
+  } catch {
+    /* if the check fails, err on the side of notifying */
+  }
+  await notifyUser(userId, title, body, createdBy, url);
 }
 
 export async function listAll(): Promise<Notification[]> {

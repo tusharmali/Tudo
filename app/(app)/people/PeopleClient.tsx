@@ -14,14 +14,12 @@ import {
 import { resetPasswordAction } from "@/app/actions/account";
 import { roleLabel } from "@/lib/roles";
 import { toast } from "@/components/Toaster";
+import Avatar, { avatarSrc } from "@/components/Avatar";
 import type { Role } from "@/lib/types";
 
-type Person = { id: string; name: string; email: string; role: Role; department: string; status: string; color: string };
+type Person = { id: string; name: string; email: string; role: Role; department: string; status: string; color: string; avatar: string };
 const BASE_DEPTS = ["Leadership", "Tech", "Digi", "Support", "HR"];
 
-function initials(n: string) {
-  return n.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
 const roleClass: Record<string, string> = { superadmin: "p-peri", director: "p-good", hr: "p-sky", deptadmin: "p-warn", employee: "p-neut" };
 
 export default function PeopleClient({
@@ -176,7 +174,7 @@ export default function PeopleClient({
                   <tr key={u.id} style={{ opacity: u.status === "suspended" ? 0.6 : 1 }}>
                     <td>
                       <div className="row" style={{ gap: 10, minWidth: 0 }}>
-                        <div className="avatar sm" style={{ background: u.color }}>{initials(u.name)}</div>
+                        <Avatar name={u.name} color={u.color} src={avatarSrc(u)} size="sm" />
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: 600 }}>{u.name}{isSelf ? " (you)" : ""}</div>
                           {locked ? (

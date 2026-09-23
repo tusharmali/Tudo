@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, requireManager } from "@/lib/dal";
-import { isMember, sendMessage, ensureDm, createGroup, getChat, membersOf } from "@/lib/chat";
+import { sendMessage, ensureDm, createGroup, getChat, membersOf } from "@/lib/chat";
 import { getUserById } from "@/lib/users";
 import { isManager } from "@/lib/roles";
+import { notifyIfEnabled } from "@/lib/notifications";
 import type { SessionUser } from "@/lib/types";
 import { actionError, type Res } from "@/lib/action";
 
@@ -22,19 +23,25 @@ export async function sendMessageAction(input: { chatId: string; content: string
     const u = await requireUser();
     const text = input.content.trim();
     if (!text) return { ok: false, error: "Type a message." };
-    if (!(await isMember(input.chatId, u.sub))) return { ok: false, error: "You're not in this chat." };
+    const chat = await getChat(input.chatId);
+    if (!chat || !membersOf(chat).includes(u.sub)) return { ok: false, error: "You're not in this chat." };
     // Block cross-department DMs for employees (defence in depth).
-    if (!isManager(u.role)) {
-      const chat = await getChat(input.chatId);
-      if (chat?.type === "dm") {
-        const otherId = membersOf(chat).find((id) => id !== u.sub);
-        if (otherId) {
-          const allowed = await assertCanMessage(u, otherId);
-          if (!allowed.ok) return { ok: false, error: allowed.error };
-        }
+    if (!isManager(u.role) && chat.type === "dm") {
+      const otherId = membersOf(chat).find((id) => id !== u.sub);
+      if (otherId) {
+        const allowed = await assertCanMessage(u, otherId);
+        if (!allowed.ok) return { ok: false, error: allowed.error };
       }
     }
     await sendMessage(input.chatId, u.sub, text.slice(0, 4000));
+
+    // Ping the other member(s) — bell + push.
+    const title = chat.type === "dm" ? `${u.name} messaged you` : `${u.name} · ${chat.name || "group"}`;
+    const body = text.slice(0, 140);
+    for (const id of membersOf(chat).filter((m) => m !== u.sub)) {
+      await notifyIfEnabled("chat.message", id, title, body, u.sub, "/chat");
+    }
+
     revalidatePath("/chat");
     return { ok: true };
   } catch (e) {

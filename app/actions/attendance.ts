@@ -16,7 +16,8 @@ import {
   removeAttendance,
 } from "@/lib/attendance";
 import { statusForToday, createLeave, decide, getLeave, type LeaveType } from "@/lib/leave";
-import { create as createNotification, notifyUser } from "@/lib/notifications";
+import { create as createNotification, notifyIfEnabled } from "@/lib/notifications";
+import { isNotifyEnabled } from "@/lib/notify-prefs";
 import { getUserById } from "@/lib/users";
 import { sendToUsers } from "@/lib/push";
 import { actionError, type Res } from "@/lib/action";
@@ -138,8 +139,10 @@ export async function decideLeaveAction(input: { id: string; decision: "approved
       : revoked
         ? `Your approved ${label} for ${range} was revoked by ${admin.name} — please check in as usual or contact them.`
         : `Your ${label} request for ${range} was declined by ${admin.name}.`;
-    await createNotification(title, body, req.userId, admin.sub);
-    await sendToUsers([req.userId], { title, body, url: "/attendance" }).catch(() => {});
+    if (await isNotifyEnabled("attendance.leave")) {
+      await createNotification(title, body, req.userId, admin.sub);
+      await sendToUsers([req.userId], { title, body, url: "/attendance" }).catch(() => {});
+    }
     await logAction(admin, "Attendance", revoked ? `Revoked ${label}` : input.decision === "approved" ? `Approved ${label}` : `Rejected ${label}`, `${range}`);
 
     revalidatePath("/attendance");
@@ -158,7 +161,7 @@ export async function clearCheckOutAction(input: { userId: string; date: string 
     if (!n) return { ok: false, error: "No check-out to remove for that day." };
     const target = await getUserById(input.userId);
     await logAction(admin, "Attendance", "Removed a check-out", `${target?.name || input.userId} · ${date}`);
-    await notifyUser(input.userId, "Check-out removed", `${admin.name} removed your check-out for ${date} — you're marked as still in.`, admin.sub, "/attendance");
+    await notifyIfEnabled("attendance.fix", input.userId, "Check-out removed", `${admin.name} removed your check-out for ${date} — you're marked as still in.`, admin.sub, "/attendance");
     revalidatePath("/attendance");
     return { ok: true, message: "Check-out removed" };
   } catch (e) {
@@ -174,7 +177,7 @@ export async function removeAttendanceAction(input: { userId: string; date: stri
     if (!n) return { ok: false, error: "No attendance record for that day." };
     const target = await getUserById(input.userId);
     await logAction(admin, "Attendance", "Cleared attendance record", `${target?.name || input.userId} · ${date}`);
-    await notifyUser(input.userId, "Attendance cleared", `${admin.name} cleared your attendance for ${date}. Please check in again if you're working.`, admin.sub, "/attendance");
+    await notifyIfEnabled("attendance.fix", input.userId, "Attendance cleared", `${admin.name} cleared your attendance for ${date}. Please check in again if you're working.`, admin.sub, "/attendance");
     revalidatePath("/attendance");
     return { ok: true, message: "Attendance cleared" };
   } catch (e) {

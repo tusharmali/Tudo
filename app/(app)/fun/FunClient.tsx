@@ -4,12 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toggleFunAction, setFunTitleAction, addContributionAction } from "@/app/actions/fun";
 import { toast } from "@/components/Toaster";
+import Avatar, { avatarSrc } from "@/components/Avatar";
 
-type Contrib = { name: string; color: string; content: string };
-
-function initials(n: string): string {
-  return n.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
+type Contrib = { id: string; name: string; color: string; avatar: string; content: string };
 
 export default function FunClient({
   enabled,
@@ -103,9 +100,7 @@ export default function FunClient({
             {contributions.map((c, i) => (
               <div className="contrib" key={i}>
                 <div className="row" style={{ gap: 9 }}>
-                  <div className="avatar sm" style={{ background: c.color }}>
-                    {initials(c.name)}
-                  </div>
+                  <Avatar name={c.name} color={c.color} src={avatarSrc(c)} size="sm" />
                   <b style={{ fontSize: 14 }}>{c.name}</b>
                 </div>
                 <div className="tiny" style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>

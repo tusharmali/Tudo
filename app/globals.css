@@ -141,9 +141,11 @@ a { color: var(--accent-ink); text-decoration: none; }
 .side-user .n { font-size: 13px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .side-user .r { font-size: 11px; color: var(--ink-faint); text-transform: capitalize; }
 
-.avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; font-family: var(--round); }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; font-family: var(--round); overflow: hidden; }
 .avatar.sm { width: 28px; height: 28px; font-size: 11px; }
 .avatar.lg { width: 44px; height: 44px; font-size: 16px; }
+.avatar.xl { width: 76px; height: 76px; font-size: 27px; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .main { min-width: 0; display: flex; flex-direction: column; }
 .topbar { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 14px; padding: 16px 30px; background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line-soft); }

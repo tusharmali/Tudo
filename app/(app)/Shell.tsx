@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "@/components/NotificationBell";
 import PwaPrompts from "@/components/PwaPrompts";
+import Avatar, { avatarSrc } from "@/components/Avatar";
 import { isManager, roleLabel } from "@/lib/roles";
 import type { SessionUser } from "@/lib/types";
 
@@ -81,15 +82,6 @@ const MOBILE: NavItem[] = [
   { href: "/chat", label: "Chat", icon: icons.chat },
 ];
 
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 function greetWord(): string {
   const h = new Date().getHours();
@@ -160,6 +152,7 @@ export default function Shell({ user, children }: { user: SessionUser; children:
     : user.role === "deptadmin"
       ? `${roleLabel(user.role)} · ${user.dept}`
       : user.dept || "Employee";
+  const meSrc = avatarSrc({ id: user.sub, avatar: user.avatar });
 
   return (
     <div className="app">
@@ -186,9 +179,7 @@ export default function Shell({ user, children }: { user: SessionUser; children:
 
         <div className="side-user">
           <Link href="/account" className="row" style={{ gap: 10, minWidth: 0, flex: 1, color: "inherit" }} title="Account & password">
-            <div className="avatar" style={{ background: user.color }}>
-              {initials(user.name)}
-            </div>
+            <Avatar name={user.name} color={user.color} src={meSrc} />
             <div className="meta">
               <div className="n">{user.name}</div>
               <div className="r">{roleText}</div>
@@ -218,8 +209,8 @@ export default function Shell({ user, children }: { user: SessionUser; children:
               {theme === "dark" ? icons.sun : icons.moon}
             </button>
             <NotificationBell />
-            <Link href="/account" className="avatar" style={{ background: user.color, textDecoration: "none" }} title="Account & password">
-              {initials(user.name)}
+            <Link href="/account" style={{ textDecoration: "none" }} title="Account & password">
+              <Avatar name={user.name} color={user.color} src={meSrc} />
             </Link>
           </div>
         </header>

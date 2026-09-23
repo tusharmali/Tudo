@@ -12,7 +12,7 @@ import { generateOverall } from "@/lib/ai";
 import { actionError, type Res } from "@/lib/action";
 import { logAction } from "@/lib/audit";
 import type { SessionUser } from "@/lib/types";
-import type { WipSections } from "@/lib/format";
+import type { WipData } from "@/lib/format";
 
 const STATUSES = ["pending", "in-progress", "done"];
 const asDate = (d: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d : todayStr());
@@ -116,10 +116,10 @@ export async function setFooterAction(input: { text: string }): Promise<Res> {
   }
 }
 
-export async function saveWipAction(input: { date: string; sections: WipSections }): Promise<Res> {
+export async function saveWipAction(input: { date: string; data: WipData }): Promise<Res> {
   try {
     const u = await requireUser();
-    await setWip(u.sub, JSON.stringify(input.sections), asDate(input.date));
+    await setWip(u.sub, JSON.stringify(input.data), asDate(input.date));
     revalidatePath("/updates");
     return { ok: true, message: "WIP saved" };
   } catch (e) {

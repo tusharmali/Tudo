@@ -16,6 +16,10 @@ function fmtDM(iso: string): string {
   const [, m, d] = iso.split("-");
   return `${d}/${m}`;
 }
+function fmtMDY(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${m}/${d}/${(y || "").slice(2)}`;
+}
 
 function statusLabel(s: string): string {
   return s === "done" ? "Done" : s === "in-progress" ? "In progress" : "Pending";
@@ -146,4 +150,138 @@ export function renderWip(date: string, s: WipSections): string {
     "",
     "Signing off",
   ].join("\n");
+}
+
+// ---------- WIP · Digi (per-task, with time + status) ----------
+export interface DigiTask {
+  name: string;
+  time: string; // e.g. "1 Hour 57 Minutes"
+  notes: string; // one bullet per line
+  status: string; // Completed | In progress | …
+}
+export interface DigiWip {
+  signIn: string; // e.g. "10:13 AM"
+  total: string; // total duration, e.g. "08 Hours 47 Minutes"
+  tasks: DigiTask[];
+}
+export const DIGI_STATUSES = ["Completed", "In progress", "On hold"];
+export const EMPTY_DIGI: DigiWip = {
+  signIn: "",
+  total: "",
+  tasks: [{ name: "", time: "", notes: "", status: "Completed" }],
+};
+
+export function renderDigiWip(date: string, w: DigiWip): string {
+  const out: string[] = [`WIP Report – ${fmtDate(date, "-")}`, ""];
+  out.push(`Signing In: ${w.signIn.trim() || "—"}`, "");
+  out.push(`Total Duration: ${w.total.trim() || "—"}`, "");
+  out.push("Tasks Worked On:", "");
+  w.tasks
+    .filter((t) => t.name.trim())
+    .forEach((t, i) => {
+      out.push(`${i + 1}. ${t.name.trim()}${t.time.trim() ? ` – ${t.time.trim()}` : ""}`);
+      for (const line of t.notes.split("\n").map((l) => l.trim()).filter(Boolean)) out.push(`   - ${line}`);
+      if (t.status.trim()) out.push(`   Status: ${t.status.trim()}`);
+      out.push("");
+    });
+  out.push("Signing off");
+  return out.join("\n");
+}
+
+// ---------- WIP · Support (bucket counts) ----------
+export interface Bucket {
+  label: string;
+  count: string;
+}
+export interface SupportWip {
+  title: string; // header prefix, e.g. "Total" or "WIP"
+  buckets: Bucket[];
+  note: string; // free line(s) before sign-off, e.g. "Checked my TD's"
+}
+/** Every bucket Support counts (union of the team's posted formats). Members
+ *  fill only the ones they have; blank counts are dropped when posting. */
+export const SUPPORT_BUCKETS = [
+  "Ticket",
+  "Male CC",
+  "Female CC",
+  "Male enrollment",
+  "Female enrollment",
+  "Chat",
+  "Email",
+  "VS",
+  "Spiro CC",
+  "Doxy CC",
+  "Re-open window",
+  "P/T reminder",
+  "Flup reminder",
+];
+export const EMPTY_SUPPORT: SupportWip = {
+  title: "Total",
+  buckets: SUPPORT_BUCKETS.map((label) => ({ label, count: "" })),
+  note: "Checked my TD's",
+};
+
+export function renderSupportWip(date: string, w: SupportWip): string {
+  const out: string[] = [`${w.title.trim() || "Total"} ${fmtMDY(date)}`, ""];
+  for (const b of w.buckets) {
+    if (!b.label.trim() || b.count.trim() === "") continue;
+    out.push(`${b.label.trim()} - ${b.count.trim()}`);
+  }
+  out.push("");
+  if (w.note.trim()) out.push(w.note.trim(), "");
+  out.push("Signing off!");
+  return out.join("\n");
+}
+
+// ---------- WIP · stored shape (discriminated union) ----------
+export type WipData =
+  | ({ format: "tech" } & WipSections)
+  | ({ format: "digi" } & DigiWip)
+  | ({ format: "support" } & SupportWip);
+
+export type WipFormat = WipData["format"];
+
+/** Which composer a department uses. Everything else falls back to the manual "tech" sections. */
+export function wipFormatForDept(dept: string): WipFormat {
+  if (dept === "Digi") return "digi";
+  if (dept === "Support") return "support";
+  return "tech";
+}
+
+export function parseDigiWip(raw: string): DigiWip | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as { format?: string; signIn?: string; total?: string; tasks?: unknown };
+    if (o?.format !== "digi") return null;
+    const tasks = Array.isArray(o.tasks) ? o.tasks : [];
+    return {
+      signIn: String(o.signIn ?? ""),
+      total: String(o.total ?? ""),
+      tasks: tasks.map((t) => {
+        const x = (t || {}) as Record<string, unknown>;
+        return { name: String(x.name ?? ""), time: String(x.time ?? ""), notes: String(x.notes ?? ""), status: String(x.status ?? "Completed") };
+      }),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function parseSupportWip(raw: string): SupportWip | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as { format?: string; title?: string; buckets?: unknown; note?: string };
+    if (o?.format !== "support") return null;
+    const buckets = Array.isArray(o.buckets) ? o.buckets : [];
+    return {
+      title: String(o.title ?? "Total"),
+      buckets: buckets.map((b) => {
+        const x = (b || {}) as Record<string, unknown>;
+        return { label: String(x.label ?? ""), count: String(x.count ?? "") };
+      }),
+      note: String(o.note ?? ""),
+    };
+  } catch {
+    return null;
+  }
 }

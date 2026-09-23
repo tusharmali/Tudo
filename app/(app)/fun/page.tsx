@@ -16,8 +16,10 @@ export default async function FunPage() {
   ]);
 
   const contributions = contribs.map((c) => ({
+    id: c.userId,
     name: umap[c.userId]?.name || "Someone",
     color: umap[c.userId]?.avatarColor || "#7178DD",
+    avatar: umap[c.userId]?.avatar || "",
     content: c.content,
   }));
 

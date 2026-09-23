@@ -4,14 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { giveKudosAction, deleteKudoAction } from "@/app/actions/kudos";
 import { toast } from "@/components/Toaster";
+import Avatar, { avatarSrc } from "@/components/Avatar";
 
 type Cat = { key: string; label: string; emoji: string };
 type FeedItem = { id: string; fromUserId: string; fromName: string; toName: string; emoji: string; label: string; message: string; when: string };
-type Leader = { name: string; color: string; count: number };
-
-function initials(n: string): string {
-  return n.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
+type Leader = { id: string; name: string; color: string; avatar: string; count: number };
 
 export default function KudosClient({
   me,
@@ -170,9 +167,7 @@ export default function KudosClient({
                 <span className="tiny faint num" style={{ width: 16 }}>
                   {i + 1}
                 </span>
-                <div className="avatar sm" style={{ background: l.color }}>
-                  {initials(l.name)}
-                </div>
+                <Avatar name={l.name} color={l.color} src={avatarSrc(l)} size="sm" />
                 <div style={{ flex: 1, minWidth: 0 }}>{l.name}</div>
                 <span className="pill p-good num">{l.count}</span>
               </div>

@@ -47,6 +47,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       role: fresh.role,
       dept: fresh.department,
       color: fresh.avatarColor,
+      avatar: fresh.avatar,
     };
   } catch {
     return session; // transient DB issue — keep the user signed in with cached claims

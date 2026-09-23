@@ -6,8 +6,10 @@ import MyDay from "./MyDay";
 import DayPlanBuilder, { type BuilderUser } from "./DayPlanBuilder";
 import OverallUpdate from "./OverallUpdate";
 import WipComposer from "./WipComposer";
+import DigiWipComposer from "./DigiWipComposer";
+import SupportWipComposer from "./SupportWipComposer";
 import type { TaskNode } from "@/lib/tasks";
-import type { WipSections } from "@/lib/format";
+import { wipFormatForDept, type WipSections } from "@/lib/format";
 
 export interface AdminData {
   users: BuilderUser[];
@@ -22,27 +24,32 @@ export interface AdminData {
 export default function UpdatesTabs({
   isAdmin,
   isDeptAdmin = false,
+  dept = "",
   date,
   today,
   myTree,
   myWeekTarget,
   savedWip,
+  savedWipRaw = "",
   autoWip,
   admin,
 }: {
   isAdmin: boolean;
   isDeptAdmin?: boolean;
+  dept?: string;
   date: string;
   today: string;
   myTree: TaskNode[];
   myWeekTarget: string;
   savedWip: WipSections | null;
+  savedWipRaw?: string;
   autoWip: WipSections;
   admin: AdminData | null;
 }) {
   const canPlan = isAdmin || isDeptAdmin;
   const tabs = ["My Day", ...(canPlan ? ["Day Plan"] : []), ...(isAdmin ? ["Overall Update"] : []), "WIP"];
   const [tab, setTab] = useState(tabs[0]);
+  const wipFormat = wipFormatForDept(dept);
 
   return (
     <>
@@ -57,7 +64,9 @@ export default function UpdatesTabs({
       </div>
 
       {tab === "My Day" && <MyDay tree={myTree} weekTarget={myWeekTarget} />}
-      {tab === "WIP" && <WipComposer saved={savedWip} auto={autoWip} date={date} />}
+      {tab === "WIP" && wipFormat === "digi" && <DigiWipComposer raw={savedWipRaw} date={date} />}
+      {tab === "WIP" && wipFormat === "support" && <SupportWipComposer raw={savedWipRaw} date={date} />}
+      {tab === "WIP" && wipFormat === "tech" && <WipComposer saved={savedWip} auto={autoWip} date={date} />}
       {canPlan && admin && tab === "Day Plan" && (
         <DayPlanBuilder
           users={admin.users}

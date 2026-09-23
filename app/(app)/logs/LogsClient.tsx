@@ -1,8 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { setNotifyPrefAction } from "@/app/actions/notify-prefs";
+import { toast } from "@/components/Toaster";
 
 type Log = { id: string; actorName: string; category: string; action: string; detail: string; when: string };
+type NotifyAction = { key: string; module: string; label: string };
 
 const CAT_PILL: Record<string, string> = {
   People: "p-peri",
@@ -11,10 +15,73 @@ const CAT_PILL: Record<string, string> = {
   Broadcast: "p-sky",
   Kudos: "p-warn",
   Concerns: "p-neut",
+  Settings: "p-sky",
   "Day plan": "p-neut",
 };
 
-export default function LogsClient({ logs }: { logs: Log[] }) {
+function NotifySettings({ actions, prefs }: { actions: NotifyAction[]; prefs: Record<string, boolean> }) {
+  const router = useRouter();
+  const [state, setState] = useState(prefs);
+  const [busy, setBusy] = useState("");
+
+  const modules = useMemo(() => [...new Set(actions.map((a) => a.module))], [actions]);
+
+  async function toggle(key: string) {
+    const next = !state[key];
+    setState((s) => ({ ...s, [key]: next }));
+    setBusy(key);
+    const r = await setNotifyPrefAction({ key, on: next });
+    if (!r.ok) {
+      setState((s) => ({ ...s, [key]: !next })); // revert
+      toast(r.error || "Error");
+    } else {
+      toast(r.message || "Saved");
+      router.refresh();
+    }
+    setBusy("");
+  }
+
+  return (
+    <div className="card pad" style={{ marginBottom: 18 }}>
+      <h3 className="sec" style={{ margin: 0 }}>Member notifications</h3>
+      <p className="muted tiny" style={{ margin: "3px 0 14px" }}>
+        Choose which actions send a bell + push to the affected member. Off means the action still happens (and is logged) — the member just isn’t pinged.
+      </p>
+      {modules.map((m) => (
+        <div key={m} style={{ marginBottom: 12 }}>
+          <div className="tiny faint" style={{ textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 6 }}>{m}</div>
+          {actions.filter((a) => a.module === m).map((a) => {
+            const on = state[a.key];
+            return (
+              <div key={a.key} className="between" style={{ padding: "7px 0", borderBottom: "1px solid var(--line, #eee)", gap: 12 }}>
+                <span className="tiny" style={{ flex: 1 }}>{a.label}</span>
+                <button
+                  type="button"
+                  className={`pill ${on ? "p-good" : "p-neut"}`}
+                  onClick={() => toggle(a.key)}
+                  disabled={busy === a.key}
+                  style={{ cursor: "pointer", border: "none", minWidth: 54, justifyContent: "center" }}
+                >
+                  {busy === a.key ? "…" : on ? "On" : "Off"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function LogsClient({
+  logs,
+  notifyActions = [],
+  notifyPrefs = {},
+}: {
+  logs: Log[];
+  notifyActions?: NotifyAction[];
+  notifyPrefs?: Record<string, boolean>;
+}) {
   const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
 
@@ -27,6 +94,8 @@ export default function LogsClient({ logs }: { logs: Log[] }) {
 
   return (
     <>
+      {notifyActions.length > 0 && <NotifySettings actions={notifyActions} prefs={notifyPrefs} />}
+
       <div className="card pad" style={{ marginBottom: 18 }}>
         <div className="between" style={{ gap: 12, flexWrap: "wrap" }}>
           <div>

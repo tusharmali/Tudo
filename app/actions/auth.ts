@@ -34,6 +34,7 @@ async function mintSession(u: User): Promise<void> {
     role: u.role,
     dept: u.department,
     color: u.avatarColor,
+    avatar: u.avatar,
   });
   (await cookies()).set(COOKIE_NAME, token, cookieOptions());
 }

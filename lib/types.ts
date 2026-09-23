@@ -8,6 +8,7 @@ export interface User {
   role: Role;
   department: string;
   avatarColor: string;
+  avatar: string; // uploaded display picture (data URL), or "" for initials
   phone?: string;
   status?: string;
 }
@@ -20,4 +21,5 @@ export interface SessionUser {
   role: Role;
   dept: string;
   color: string;
+  avatar?: string; // display picture, refreshed from the DB each request
 }

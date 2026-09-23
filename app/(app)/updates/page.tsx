@@ -25,7 +25,8 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
   const myTasks = await listForUser(user.sub, date);
   const myTree = toTree(myTasks);
   const myWeekTarget = settings[`weektarget:${user.sub}`] || "";
-  const savedWip = parseWipSections(await getWip(user.sub, date));
+  const savedWipRaw = await getWip(user.sub, date);
+  const savedWip = parseWipSections(savedWipRaw);
   const autoWip = autoWipSections(myTree);
 
   let admin: AdminData | null = null;
@@ -67,11 +68,13 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
     <UpdatesTabs
       isAdmin={isMgr}
       isDeptAdmin={isDeptAdm}
+      dept={user.dept}
       date={date}
       today={today}
       myTree={myTree}
       myWeekTarget={myWeekTarget}
       savedWip={savedWip}
+      savedWipRaw={savedWipRaw}
       autoWip={autoWip}
       admin={admin}
     />

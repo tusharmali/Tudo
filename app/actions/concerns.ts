@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/dal";
 import { getUserById } from "@/lib/users";
 import { isManager } from "@/lib/roles";
 import { createConcern, addReply, setStatus, listRelated } from "@/lib/concerns";
+import { notifyIfEnabled } from "@/lib/notifications";
 import { actionError, type Res } from "@/lib/action";
 import { logAction } from "@/lib/audit";
 
@@ -19,6 +20,7 @@ export async function createConcernAction(input: { toUserId: string; subject: st
     }
     await createConcern(u.sub, input.toUserId, input.subject.trim(), input.message.trim());
     await logAction(u, "Concerns", "Raised a concern", `to ${to.name}: ${input.subject.trim().slice(0,60)}`);
+    await notifyIfEnabled("concern.raised", input.toUserId, "New concern raised", `${u.name}: ${input.subject.trim().slice(0, 80)}`, u.sub, "/concerns");
     revalidatePath("/concerns");
     return { ok: true, message: "Concern sent privately" };
   } catch (e) {
@@ -37,8 +39,11 @@ export async function replyConcernAction(input: { concernId: string; message: st
   try {
     const u = await requireUser();
     if (!input.message.trim()) return { ok: false, error: "Type a reply." };
-    await canAccess(input.concernId, u.sub);
+    const c = await canAccess(input.concernId, u.sub);
     await addReply(input.concernId, u.sub, input.message.trim());
+    // Notify the other party on the thread.
+    const otherId = c.fromUserId === u.sub ? c.toUserId : c.fromUserId;
+    if (otherId) await notifyIfEnabled("concern.reply", otherId, "New reply on a concern", `${u.name}: ${input.message.trim().slice(0, 80)}`, u.sub, "/concerns");
     revalidatePath("/concerns");
     return { ok: true, message: "Reply sent" };
   } catch (e) {

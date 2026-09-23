@@ -19,6 +19,7 @@ function rowToUser(r: Row): User {
     role: (r.role as Role) || "employee",
     department: r.department || "",
     avatarColor: r.avatarColor || "#7178DD",
+    avatar: r.avatar || "",
     phone: r.phone || "",
     status: r.status || "active",
   };
@@ -84,6 +85,7 @@ export async function createUser(input: NewUser): Promise<User> {
     role: input.role,
     department: input.department?.trim() || "",
     avatarColor: colorFor(email),
+    avatar: "",
     phone: input.phone?.trim() || "",
     status: "active",
   };
@@ -97,11 +99,26 @@ export async function createUser(input: NewUser): Promise<User> {
     role: user.role,
     department: user.department,
     avatarColor: user.avatarColor,
+    avatar: "",
     phone: user.phone ?? "",
     status: "active",
     createdAt: new Date().toISOString(),
   });
   return user;
+}
+
+/** Self: update your own display name. */
+export async function setName(userId: string, name: string): Promise<void> {
+  const clean = name.trim();
+  if (clean.length < 2) throw new Error("Name must be at least 2 characters.");
+  const changed = await updateWhere("Users", (r) => r.id === userId, { name: clean.slice(0, 60) });
+  if (!changed) throw new Error("User not found.");
+}
+
+/** Self: set (or clear) your display picture — a compact data URL. */
+export async function setAvatar(userId: string, avatar: string): Promise<void> {
+  const changed = await updateWhere("Users", (r) => r.id === userId, { avatar });
+  if (!changed) throw new Error("User not found.");
 }
 
 /** Manager: suspend / reactivate a user (suspended users can't sign in). */
