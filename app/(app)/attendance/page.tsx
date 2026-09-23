@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
 import { listUsers, usersMap } from "@/lib/users";
-import { getAttConfig, officeIsSet, getToday, listByDate, type AttRecord } from "@/lib/attendance";
+import { getAttConfig, officeIsSet, getToday, listByDate, isGeoExempt, type AttRecord } from "@/lib/attendance";
 import { statusForToday, listForUser, listPending, listApprovedForDate, listUpcomingApproved } from "@/lib/leave";
 import type { User } from "@/lib/types";
 import CheckInCard from "./CheckInCard";
@@ -21,11 +21,12 @@ export default async function AttendancePage() {
   if (!user) return null;
   const isAdmin = isManager(user.role);
 
-  const [cfg, myToday, myStatus, myLeaves] = await Promise.all([
+  const [cfg, myToday, myStatus, myLeaves, myExempt] = await Promise.all([
     getAttConfig(),
     getToday(user.sub),
     statusForToday(user.sub),
     listForUser(user.sub),
+    isGeoExempt(user.sub),
   ]);
 
   type ReqRow = { id: string; userName: string; type: string; fromDate: string; toDate: string; reason: string };
@@ -80,7 +81,7 @@ export default async function AttendancePage() {
   return (
     <>
       <div className="grid g-2-1" style={{ marginBottom: 18 }}>
-        <CheckInCard today={myToday} onLeave={myStatus.onLeave} wfhApproved={myStatus.wfhApproved} />
+        <CheckInCard today={myToday} onLeave={myStatus.onLeave} wfhApproved={myStatus.wfhApproved} locationExempt={myExempt} />
         <LeaveForm mine={myLeaves} />
       </div>
 

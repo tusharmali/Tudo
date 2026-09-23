@@ -1,20 +1,30 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser, requireManager } from "@/lib/dal";
+import { requireUser, requireManager, requireDayPlanEditor } from "@/lib/dal";
 import { isManager } from "@/lib/roles";
 import { allRows, appendRows, genId, todayStr } from "@/lib/db";
 import { listByDate, toTree, createTask, setStatus, setUpdate, removeTask, setWeekTarget } from "@/lib/tasks";
 import { setSetting } from "@/lib/settings";
 import { setWip } from "@/lib/wip";
-import { listUsers } from "@/lib/users";
+import { listUsers, getUserById } from "@/lib/users";
 import { generateOverall } from "@/lib/ai";
 import { actionError, type Res } from "@/lib/action";
 import { logAction } from "@/lib/audit";
+import type { SessionUser } from "@/lib/types";
 import type { WipSections } from "@/lib/format";
 
 const STATUSES = ["pending", "in-progress", "done"];
 const asDate = (d: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d : todayStr());
+
+/** A department admin may only touch their own department; managers, anyone. */
+async function assertDeptScope(actor: SessionUser, targetUserId: string) {
+  if (isManager(actor.role)) return;
+  const target = await getUserById(targetUserId);
+  if (!target || target.department !== actor.dept) {
+    throw new Error("You can only manage your own department's day plan.");
+  }
+}
 
 /** Find a task by id across all dates and check ownership. */
 async function ownTaskOrAdmin(id: string, userId: string, isAdmin: boolean) {
@@ -51,7 +61,8 @@ export async function saveTaskUpdateAction(input: { id: string; updateText: stri
 
 export async function createTaskAction(input: { userId: string; content: string; parentId?: string; date: string }): Promise<Res> {
   try {
-    const admin = await requireManager();
+    const admin = await requireDayPlanEditor();
+    await assertDeptScope(admin, input.userId);
     if (!input.content.trim()) return { ok: false, error: "Type the task first." };
     await createTask({
       userId: input.userId,
@@ -70,7 +81,9 @@ export async function createTaskAction(input: { userId: string; content: string;
 
 export async function deleteTaskAction(input: { id: string }): Promise<Res> {
   try {
-    const admin = await requireManager();
+    const admin = await requireDayPlanEditor();
+    const t = (await allRows("Tasks")).find((x) => x.id === input.id);
+    if (t) await assertDeptScope(admin, t.userId);
     await removeTask(input.id);
     await logAction(admin, "Day plan", "Removed a task", "");
     revalidatePath("/updates");
@@ -82,7 +95,8 @@ export async function deleteTaskAction(input: { id: string }): Promise<Res> {
 
 export async function setWeekTargetAction(input: { userId: string; text: string }): Promise<Res> {
   try {
-    await requireManager();
+    const admin = await requireDayPlanEditor();
+    await assertDeptScope(admin, input.userId);
     await setWeekTarget(input.userId, input.text);
     revalidatePath("/updates");
     return { ok: true, message: "Week target saved" };
@@ -145,14 +159,20 @@ export async function generateOverallAction(input: { date: string }): Promise<Re
 /** Copy the most recent prior day's tasks into `date` — fresh, reset to pending. */
 export async function copyPreviousDayPlanAction(input: { date: string }): Promise<Res> {
   try {
-    const admin = await requireManager();
+    const admin = await requireDayPlanEditor();
     const target = asDate(input.date);
     const all = await allRows("Tasks");
     const priorDates = [...new Set(all.filter((t) => t.date && t.date < target).map((t) => t.date))].sort();
     const src = priorDates[priorDates.length - 1];
     if (!src) return { ok: false, error: "No earlier day plan found to copy from." };
-    const srcTasks = all.filter((t) => t.date === src);
-    if (!srcTasks.length) return { ok: false, error: "The previous plan has no tasks." };
+    let srcTasks = all.filter((t) => t.date === src);
+    // A department admin only copies their own department's tasks.
+    if (!isManager(admin.role)) {
+      const users = await listUsers();
+      const deptIds = new Set(users.filter((u) => u.department === admin.dept).map((u) => u.id));
+      srcTasks = srcTasks.filter((t) => deptIds.has(t.userId));
+    }
+    if (!srcTasks.length) return { ok: false, error: "The previous plan has no tasks for your department." };
 
     const idMap: Record<string, string> = {};
     for (const t of srcTasks) idMap[t.id] = genId("tk");

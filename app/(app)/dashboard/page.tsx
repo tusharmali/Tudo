@@ -4,7 +4,7 @@ import { isManager } from "@/lib/roles";
 import { todayStr } from "@/lib/db";
 import DashboardTeam from "./DashboardTeam";
 import CheckInPrompt from "./CheckInPrompt";
-import { getToday, listByDate } from "@/lib/attendance";
+import { getToday, listByDate, isGeoExempt } from "@/lib/attendance";
 import { statusForToday, listApprovedForDate, listPending } from "@/lib/leave";
 import { listForUser as listTasksForUser, toTree } from "@/lib/tasks";
 import { listForUser as listNotifsForUser } from "@/lib/notifications";
@@ -21,14 +21,24 @@ export default async function DashboardPage() {
   const isAdmin = isManager(user.role);
   const date = todayStr();
 
-  const [settings, myAtt, myLeave, myTasks, notifs, releases] = await Promise.all([
+  const [settings, myAtt, myLeave, myTasks, notifs, releases, myExempt] = await Promise.all([
     getSettings(),
     getToday(user.sub),
     statusForToday(user.sub),
     listTasksForUser(user.sub, date),
     listNotifsForUser(user.sub),
     listReleases(),
+    isGeoExempt(user.sub),
   ]);
+
+  // Releases is a Tech-department surface; other departments get their own module link.
+  const canSeeReleases = isAdmin || user.dept === "Tech";
+  const deptLink =
+    user.dept === "Digi"
+      ? { href: "/shoots", label: "Shoots & Clients", sub: "Your team board" }
+      : user.dept === "Support"
+        ? { href: "/milestones", label: "Milestones", sub: "Your goals" }
+        : { href: "/kudos", label: "Kudos", sub: "Appreciate a teammate" };
 
   const myTree = toTree(myTasks);
   let open = 0;
@@ -93,7 +103,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {!myAtt?.checkIn && !myLeave.onLeave && <CheckInPrompt wfhApproved={myLeave.wfhApproved} />}
+      {!myAtt?.checkIn && !myLeave.onLeave && <CheckInPrompt wfhApproved={myLeave.wfhApproved} locationExempt={myExempt} />}
 
       <div className="grid g-4 stagger" style={{ marginBottom: 18 }}>
         <Link href="/attendance" className={`stat ${attTint}`}>
@@ -130,7 +140,7 @@ export default async function DashboardPage() {
             <div className="v num">{present}<span className="faint" style={{ fontSize: 16 }}>/{totalUsers}</span></div>
             <div className="d muted">{wfh} WFH · {leave} on leave</div>
           </Link>
-        ) : (
+        ) : canSeeReleases ? (
           <Link href="/releases" className="stat tint-peach">
             <div className="ic">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,6 +150,17 @@ export default async function DashboardPage() {
             <div className="k">Next release</div>
             <div className="v" style={{ fontSize: 20 }}>{nextRelease ? nextRelease.scheduledDate.slice(5).replace("-", "/") : "None"}</div>
             <div className="d muted">{nextRelease ? nextRelease.title.slice(0, 26) : "Nothing scheduled"}</div>
+          </Link>
+        ) : (
+          <Link href={deptLink.href} className="stat tint-peach">
+            <div className="ic">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16v11H7l-3 3V5Z" />
+              </svg>
+            </div>
+            <div className="k">{deptLink.label}</div>
+            <div className="v" style={{ fontSize: 20 }}>Open</div>
+            <div className="d muted">{deptLink.sub}</div>
           </Link>
         )}
 
@@ -201,7 +222,7 @@ export default async function DashboardPage() {
         <div className="stack">
           {isAdmin ? (
             <DashboardTeam roster={roster.map(({ u, state }) => ({ id: u.id, name: u.name, dept: u.department || "—", state }))} />
-          ) : (
+          ) : canSeeReleases ? (
             <div className="card pad">
               <div className="lbl">Next release</div>
               {nextRelease ? (
@@ -213,6 +234,12 @@ export default async function DashboardPage() {
                 <div className="tiny faint" style={{ marginTop: 6 }}>Nothing scheduled.</div>
               )}
             </div>
+          ) : (
+            <Link href={deptLink.href} className="card pad" style={{ display: "block", color: "inherit", textDecoration: "none" }}>
+              <div className="lbl">{deptLink.label}</div>
+              <div style={{ fontFamily: "var(--round)", fontWeight: 750, fontSize: 16, marginTop: 6 }}>{deptLink.sub}</div>
+              <div className="tiny muted" style={{ marginTop: 3 }}>Open →</div>
+            </Link>
           )}
 
           <div className="card pad">

@@ -8,6 +8,7 @@ import {
   setUserDepartmentAction,
   setUserRoleAction,
   setUserEmailAction,
+  setUserGeoExemptAction,
   setTwofaEnabledAction,
 } from "@/app/actions/team";
 import { resetPasswordAction } from "@/app/actions/account";
@@ -21,7 +22,7 @@ const BASE_DEPTS = ["Leadership", "Tech", "Digi", "Support", "HR"];
 function initials(n: string) {
   return n.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 }
-const roleClass: Record<string, string> = { superadmin: "p-peri", director: "p-good", hr: "p-sky", employee: "p-neut" };
+const roleClass: Record<string, string> = { superadmin: "p-peri", director: "p-good", hr: "p-sky", deptadmin: "p-warn", employee: "p-neut" };
 
 export default function PeopleClient({
   me,
@@ -30,6 +31,7 @@ export default function PeopleClient({
   twofa,
   emailReady,
   ownerId,
+  geoExempt,
 }: {
   me: { id: string; role: Role };
   users: Person[];
@@ -37,9 +39,11 @@ export default function PeopleClient({
   twofa: boolean;
   emailReady: boolean;
   ownerId: string;
+  geoExempt: string[];
 }) {
   const router = useRouter();
   const iamSuper = me.role === "superadmin";
+  const exemptSet = new Set(geoExempt);
   const deptOptions = useMemo(() => [...new Set([...BASE_DEPTS, ...departments])], [departments]);
   const [busy, setBusy] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -97,6 +101,9 @@ export default function PeopleClient({
     if (next.length < 6) return toast("Password must be at least 6 characters");
     run(`pw:${u.id}`, () => resetPasswordAction({ userId: u.id, next }));
   }
+  function toggleGeo(u: Person) {
+    run(`geo:${u.id}`, () => setUserGeoExemptAction({ userId: u.id, exempt: !exemptSet.has(u.id) }));
+  }
   function toggle2fa() {
     if (!twofa && !emailReady) return toast("Set up Resend (RESEND_API_KEY) before turning on 2FA");
     if (!twofa && !confirm("Require an emailed code on new logins? Make sure every member has a real, reachable email first.")) return;
@@ -142,6 +149,7 @@ export default function PeopleClient({
         <div className="row" style={{ gap: 10, marginTop: 10, flexWrap: "wrap" }}>
           <select className="inp" style={{ maxWidth: 200 }} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
             <option value="employee">Employee</option>
+            {iamSuper && <option value="deptadmin">Dept Admin</option>}
             {iamSuper && <option value="hr">HR Manager</option>}
             {iamSuper && <option value="director">Director</option>}
             {iamSuper && <option value="superadmin">Super Admin</option>}
@@ -205,6 +213,7 @@ export default function PeopleClient({
                       {iamSuper && !isSelf && !locked ? (
                         <select className="inp" style={{ padding: "5px 8px", fontSize: 12.5, width: 130 }} value={u.role} disabled={busy === `role:${u.id}`} onChange={(e) => changeRole(u, e.target.value as Role)}>
                           <option value="employee">Employee</option>
+                          <option value="deptadmin">Dept Admin</option>
                           <option value="hr">HR Manager</option>
                           <option value="director">Director</option>
                           <option value="superadmin">Super Admin</option>
@@ -225,6 +234,17 @@ export default function PeopleClient({
                     <td>
                       <div className="row" style={{ gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                         {locked && <span className="tiny faint" title="Only the owner can change this account">🔒 Protected</span>}
+                        {!locked && (
+                          <button
+                            className={`btn ${exemptSet.has(u.id) ? "btn-ghost" : "btn-ghost"}`}
+                            style={{ padding: "6px 10px", fontSize: 12, color: exemptSet.has(u.id) ? "var(--ink-faint)" : "var(--good)" }}
+                            title={exemptSet.has(u.id) ? "GPS not required (fixed PC) — click to require GPS" : "GPS required for check-in — click to exempt (fixed PC)"}
+                            onClick={() => toggleGeo(u)}
+                            disabled={busy === `geo:${u.id}`}
+                          >
+                            {exemptSet.has(u.id) ? "📍 GPS off" : "📍 GPS on"}
+                          </button>
+                        )}
                         {!locked && (
                           <button className="btn btn-ghost" style={{ padding: "6px 10px", fontSize: 12 }} onClick={() => resetPw(u)} disabled={busy === `pw:${u.id}`}>Reset password</button>
                         )}

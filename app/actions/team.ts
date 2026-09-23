@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requireManager, requireAdmin } from "@/lib/dal";
 import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail } from "@/lib/users";
 import { setTwofaEnabled } from "@/lib/twofa";
+import { setGeoExempt } from "@/lib/attendance";
 import { assertCanModify } from "@/lib/owner";
 import { logAction } from "@/lib/audit";
 import { actionError, type Res } from "@/lib/action";
 import type { Role } from "@/lib/types";
 
-const ROLES: Role[] = ["employee", "hr", "director", "superadmin"];
+const ROLES: Role[] = ["employee", "deptadmin", "hr", "director", "superadmin"];
 
 export async function addTeammateAction(input: {
   name: string;
@@ -87,6 +88,20 @@ export async function setUserEmailAction(input: { userId: string; email: string 
     await logAction(me, "People", "Changed login email", `${beforeEmail} → ${input.email}`);
     revalidatePath("/people");
     return { ok: true, message: "Email updated" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setUserGeoExemptAction(input: { userId: string; exempt: boolean }): Promise<Res> {
+  try {
+    const me = await requireManager();
+    const target = await getUserById(input.userId);
+    if (!target) return { ok: false, error: "User not found." };
+    await setGeoExempt(input.userId, input.exempt);
+    await logAction(me, "People", input.exempt ? "Turned off GPS check-in" : "Turned on GPS check-in", target.name);
+    revalidatePath("/people");
+    return { ok: true, message: input.exempt ? `${target.name} can check in without GPS` : `${target.name} needs GPS to check in` };
   } catch (e) {
     return actionError(e);
   }

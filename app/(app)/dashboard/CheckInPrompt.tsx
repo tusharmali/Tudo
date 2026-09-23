@@ -6,7 +6,7 @@ import { checkInAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
 import { getCurrentCoords, type Coords } from "@/lib/geo";
 
-export default function CheckInPrompt({ wfhApproved }: { wfhApproved: boolean }) {
+export default function CheckInPrompt({ wfhApproved, locationExempt = false }: { wfhApproved: boolean; locationExempt?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -16,12 +16,12 @@ export default function CheckInPrompt({ wfhApproved }: { wfhApproved: boolean })
     setBusy(true);
     try {
       let coords: Coords = { lat: 0, lng: 0, accuracy: 0 };
-      if (!wfhApproved) coords = await getCurrentCoords();
+      if (!wfhApproved && !locationExempt) coords = await getCurrentCoords();
       else {
         try {
           coords = await getCurrentCoords();
         } catch {
-          /* WFH: location optional */
+          /* WFH / GPS-exempt: location optional */
         }
       }
       const res = await checkInAction(coords);

@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
-import { isManager } from "@/lib/roles";
+import { isManager, isDeptAdmin } from "@/lib/roles";
 import { todayStr } from "@/lib/db";
 import { listByDate, listForUser, toTree, type TaskNode } from "@/lib/tasks";
 import { getWip } from "@/lib/wip";
@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
 export default async function UpdatesPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const user = await getCurrentUser();
   if (!user) return null;
-  const isAdmin = isManager(user.role);
+  const isMgr = isManager(user.role);
+  const isDeptAdm = isDeptAdmin(user.role);
+  const canPlan = isMgr || isDeptAdm; // managers + department admins can build the day plan
   const today = todayStr();
   const sp = await searchParams;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date || "") ? (sp.date as string) : today;
@@ -27,8 +29,10 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
   const autoWip = autoWipSections(myTree);
 
   let admin: AdminData | null = null;
-  if (isAdmin) {
-    const [users, allTasks] = await Promise.all([listUsers(), listByDate(date)]);
+  if (canPlan) {
+    const [allUsers, allTasks] = await Promise.all([listUsers(), listByDate(date)]);
+    // A department admin only manages their own department.
+    const users = isMgr ? allUsers : allUsers.filter((u) => u.department === user.dept);
     const tasksByUser: Record<string, TaskNode[]> = {};
     const weekTargets: Record<string, string> = {};
     for (const u of users) {
@@ -61,7 +65,8 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
 
   return (
     <UpdatesTabs
-      isAdmin={isAdmin}
+      isAdmin={isMgr}
+      isDeptAdmin={isDeptAdm}
       date={date}
       today={today}
       myTree={myTree}

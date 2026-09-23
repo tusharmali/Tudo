@@ -40,8 +40,14 @@ export default async function ConcernsPage() {
     direction: c.fromUserId === user.sub ? "sent" : "received",
   }));
 
+  // Everyone can reach directors, super-admins and HR. Employees can also reach
+  // their own department's admin (shown based on the viewer's department).
   const recipients = users
-    .filter((u) => isManager(u.role) && (u.status || "active") !== "suspended")
+    .filter(
+      (u) =>
+        (u.status || "active") !== "suspended" &&
+        (isManager(u.role) || (u.role === "deptadmin" && u.department === user.dept)),
+    )
     .map((u) => ({ id: u.id, name: u.name, role: roleLabel(u.role) }));
 
   return <ConcernsClient me={user.sub} concerns={concerns} repliesByConcern={repliesByConcern} recipients={recipients} />;

@@ -14,7 +14,9 @@ export async function createConcernAction(input: { toUserId: string; subject: st
     if (!input.toUserId) return { ok: false, error: "Pick who to send it to." };
     if (!input.subject.trim() || !input.message.trim()) return { ok: false, error: "Add a subject and a message." };
     const to = await getUserById(input.toUserId);
-    if (!to || !isManager(to.role)) return { ok: false, error: "You can only send concerns to an admin, director or HR." };
+    if (!to || !(isManager(to.role) || (to.role === "deptadmin" && to.department === u.dept))) {
+      return { ok: false, error: "You can only send concerns to an admin, director, HR, or your department admin." };
+    }
     await createConcern(u.sub, input.toUserId, input.subject.trim(), input.message.trim());
     await logAction(u, "Concerns", "Raised a concern", `to ${to.name}: ${input.subject.trim().slice(0,60)}`);
     revalidatePath("/concerns");

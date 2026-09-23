@@ -155,7 +155,11 @@ export default function Shell({ user, children }: { user: SessionUser; children:
     .filter((s) => !s.adminOnly || isManager(user.role))
     .map((s) => ({ ...s, items: s.items.filter(canSeeItem) }))
     .filter((s) => s.items.length > 0);
-  const roleText = user.role === "employee" ? user.dept || "Employee" : roleLabel(user.role);
+  const roleText = isManager(user.role)
+    ? roleLabel(user.role)
+    : user.role === "deptadmin"
+      ? `${roleLabel(user.role)} · ${user.dept}`
+      : user.dept || "Employee";
 
   return (
     <div className="app">

@@ -1,4 +1,22 @@
 import { allRows, appendRow, updateWhere, readConfig, setConfig, genId, todayStr } from "./db";
+import { getSetting, setSetting } from "./settings";
+
+// ---------- per-person GPS exemption (for fixed PCs that can't move) ----------
+const GEO_KEY = (uid: string) => `geoexempt:${uid}`;
+
+/** True if this user may check in WITHOUT a location / geofence check. */
+export async function isGeoExempt(userId: string): Promise<boolean> {
+  return (await getSetting(GEO_KEY(userId))) === "true";
+}
+export async function setGeoExempt(userId: string, exempt: boolean): Promise<void> {
+  await setSetting(GEO_KEY(userId), exempt ? "true" : "false");
+}
+/** All user ids currently exempt from the location check. */
+export async function listGeoExemptIds(): Promise<string[]> {
+  return (await allRows("Settings"))
+    .filter((r) => r.key?.startsWith("geoexempt:") && r.value === "true")
+    .map((r) => r.key.slice("geoexempt:".length));
+}
 
 export interface AttConfig {
   officeLat: number;

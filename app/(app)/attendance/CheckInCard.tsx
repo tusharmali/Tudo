@@ -11,10 +11,12 @@ export default function CheckInCard({
   today,
   onLeave,
   wfhApproved,
+  locationExempt = false,
 }: {
   today: AttRecord | null;
   onLeave: boolean;
   wfhApproved: boolean;
+  locationExempt?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -25,13 +27,13 @@ export default function CheckInCard({
     setBusy(true);
     try {
       let coords: Coords = { lat: 0, lng: 0, accuracy: 0 };
-      if (!wfhApproved) {
+      if (!wfhApproved && !locationExempt) {
         coords = await getCurrentCoords();
       } else {
         try {
           coords = await getCurrentCoords();
         } catch {
-          /* WFH: location is optional */
+          /* WFH / GPS-exempt: location is optional */
         }
       }
       const res = await checkInAction(coords);

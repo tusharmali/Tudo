@@ -21,6 +21,7 @@ export interface AdminData {
 
 export default function UpdatesTabs({
   isAdmin,
+  isDeptAdmin = false,
   date,
   today,
   myTree,
@@ -30,6 +31,7 @@ export default function UpdatesTabs({
   admin,
 }: {
   isAdmin: boolean;
+  isDeptAdmin?: boolean;
   date: string;
   today: string;
   myTree: TaskNode[];
@@ -38,7 +40,8 @@ export default function UpdatesTabs({
   autoWip: WipSections;
   admin: AdminData | null;
 }) {
-  const tabs = isAdmin ? ["My Day", "Day Plan", "Overall Update", "WIP"] : ["My Day", "WIP"];
+  const canPlan = isAdmin || isDeptAdmin;
+  const tabs = ["My Day", ...(canPlan ? ["Day Plan"] : []), ...(isAdmin ? ["Overall Update"] : []), "WIP"];
   const [tab, setTab] = useState(tabs[0]);
 
   return (
@@ -55,7 +58,7 @@ export default function UpdatesTabs({
 
       {tab === "My Day" && <MyDay tree={myTree} weekTarget={myWeekTarget} />}
       {tab === "WIP" && <WipComposer saved={savedWip} auto={autoWip} date={date} />}
-      {isAdmin && admin && tab === "Day Plan" && (
+      {canPlan && admin && tab === "Day Plan" && (
         <DayPlanBuilder
           users={admin.users}
           tasksByUser={admin.tasksByUser}
@@ -63,6 +66,7 @@ export default function UpdatesTabs({
           footer={admin.footer}
           dayPlanText={admin.dayPlanText}
           date={date}
+          canEditFooter={isAdmin}
         />
       )}
       {isAdmin && admin && tab === "Overall Update" && <OverallUpdate updatesText={admin.updatesText} aiOn={admin.aiOn} date={date} />}

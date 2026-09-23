@@ -11,6 +11,7 @@ import {
   recordCheckOut,
   setOffice,
   nowHM,
+  isGeoExempt,
 } from "@/lib/attendance";
 import { statusForToday, createLeave, decide, getLeave, type LeaveType } from "@/lib/leave";
 import { create as createNotification } from "@/lib/notifications";
@@ -37,10 +38,11 @@ export async function checkInAction(coords: Coords): Promise<Res> {
     let status = "present";
     let distanceM = 0;
 
+    const exempt = await isGeoExempt(u.sub);
     if (st.wfhApproved) {
       type = "wfh";
       status = "wfh";
-    } else if (officeIsSet(cfg)) {
+    } else if (officeIsSet(cfg) && !exempt) {
       if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) {
         return { ok: false, error: "Couldn't read your location. Allow location access and try again." };
       }

@@ -16,6 +16,7 @@ export default function DayPlanBuilder({
   weekTargets,
   footer,
   date,
+  canEditFooter = true,
 }: {
   users: BuilderUser[];
   tasksByUser: Record<string, TaskNode[]>;
@@ -23,6 +24,7 @@ export default function DayPlanBuilder({
   footer: string;
   dayPlanText?: string;
   date: string;
+  canEditFooter?: boolean;
 }) {
   const router = useRouter();
   const departments = useMemo(() => [...new Set(users.map((u) => u.department).filter(Boolean))].sort(), [users]);
@@ -180,11 +182,13 @@ export default function DayPlanBuilder({
           )}
         </div>
 
-        <div className="card pad">
-          <label className="lbl">Plan footer — testing plan, release points, reminders…</label>
-          <textarea className="inp" style={{ minHeight: 120, fontFamily: "var(--mono)", fontSize: 12.5 }} value={ft} onChange={(e) => setFt(e.target.value)} placeholder={"*Testing Plan* - @dhruvi @aastha\no ...\n\nRelease points(6th aug):\no ..."} />
-          <button className="btn btn-ghost" onClick={saveFooter} style={{ marginTop: 10 }}>Save footer</button>
-        </div>
+        {canEditFooter && (
+          <div className="card pad">
+            <label className="lbl">Plan footer — testing plan, release points, reminders…</label>
+            <textarea className="inp" style={{ minHeight: 120, fontFamily: "var(--mono)", fontSize: 12.5 }} value={ft} onChange={(e) => setFt(e.target.value)} placeholder={"*Testing Plan* - @dhruvi @aastha\no ...\n\nRelease points(6th aug):\no ..."} />
+            <button className="btn btn-ghost" onClick={saveFooter} style={{ marginTop: 10 }}>Save footer</button>
+          </div>
+        )}
       </div>
 
       <div className="copybox" style={{ alignSelf: "start" }}>
