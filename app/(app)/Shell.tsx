@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "@/components/NotificationBell";
+import { isManager, roleLabel } from "@/lib/roles";
 import type { SessionUser } from "@/lib/types";
 
 const svg = (d: ReactNode) => (
@@ -28,6 +29,9 @@ const icons = {
   moon: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />),
   more: svg(<><rect x="4" y="4" width="6" height="6" rx="1.5" /><rect x="14" y="4" width="6" height="6" rx="1.5" /><rect x="4" y="14" width="6" height="6" rx="1.5" /><rect x="14" y="14" width="6" height="6" rx="1.5" /></>),
   account: svg(<><circle cx="12" cy="8" r="4" /><path strokeLinecap="round" strokeLinejoin="round" d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" /></>),
+  people: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM21 20v-2a4 4 0 0 0-3-3.9M16 4.1a4 4 0 0 1 0 7.8" />),
+  reports: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 20V4m0 16h16M8 16v-4m4 4V8m4 8v-6" />),
+  refresh: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 0 0 6 5.3L4 8M4 15a8 8 0 0 0 14 3.7l2-2.7" />),
 };
 
 type NavItem = { href: string; label: string; icon: ReactNode; badge?: string };
@@ -52,7 +56,15 @@ const NAV: NavSection[] = [
       { href: "/fun", label: "Fun Zone", icon: icons.fun },
     ],
   },
-  { section: "Admin", adminOnly: true, items: [{ href: "/broadcast", label: "Broadcast", icon: icons.broadcast }] },
+  {
+    section: "Manage",
+    adminOnly: true,
+    items: [
+      { href: "/people", label: "People", icon: icons.people },
+      { href: "/reports", label: "Reports", icon: icons.reports },
+      { href: "/broadcast", label: "Broadcast", icon: icons.broadcast },
+    ],
+  },
 ];
 
 const MOBILE: NavItem[] = [
@@ -79,11 +91,27 @@ function greetWord(): string {
 
 export default function Shell({ user, children }: { user: SessionUser; children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [greeting, setGreeting] = useState("Welcome back");
   const [dateStr, setDateStr] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
+
+  // Keep every screen live: soft-refresh server data every 30s (paused when the
+  // tab is hidden). Client state — inputs, open menus — is preserved.
+  useEffect(() => {
+    const tick = () => { if (document.visibilityState === "visible") router.refresh(); };
+    const t = setInterval(tick, 30000);
+    return () => clearInterval(t);
+  }, [router]);
+
+  function refreshNow() {
+    setSyncing(true);
+    router.refresh();
+    setTimeout(() => setSyncing(false), 600);
+  }
 
   useEffect(() => {
     const t = (document.documentElement.getAttribute("data-theme") as "light" | "dark") || "light";
@@ -112,8 +140,8 @@ export default function Shell({ user, children }: { user: SessionUser; children:
 
   const first = user.name.split(" ")[0] || user.name;
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
-  const sections = NAV.filter((s) => !s.adminOnly || user.role === "superadmin");
-  const roleLabel = user.role === "superadmin" ? "Super Admin" : user.dept || "Employee";
+  const sections = NAV.filter((s) => !s.adminOnly || isManager(user.role));
+  const roleText = user.role === "employee" ? user.dept || "Employee" : roleLabel(user.role);
 
   return (
     <div className="app">
@@ -143,7 +171,7 @@ export default function Shell({ user, children }: { user: SessionUser; children:
             </div>
             <div className="meta">
               <div className="n">{user.name}</div>
-              <div className="r">{roleLabel}</div>
+              <div className="r">{roleText}</div>
             </div>
           </Link>
           <form action={logout}>
@@ -160,9 +188,12 @@ export default function Shell({ user, children }: { user: SessionUser; children:
             <h2>
               {greeting}, {first} 👋
             </h2>
-            <div className="sub">{dateStr || roleLabel}</div>
+            <div className="sub">{dateStr || roleText}</div>
           </div>
           <div className="top-actions">
+            <button className="icon-btn" onClick={refreshNow} title="Refresh now" type="button" style={syncing ? { animation: "spin .6s linear" } : undefined}>
+              {icons.refresh}
+            </button>
             <button className="icon-btn" onClick={toggleTheme} title="Toggle theme" type="button" suppressHydrationWarning>
               {theme === "dark" ? icons.sun : icons.moon}
             </button>

@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser, requireAdmin } from "@/lib/dal";
+import { requireUser, requireManager } from "@/lib/dal";
+import { isManager } from "@/lib/roles";
 import { allRows, appendRows, genId, todayStr } from "@/lib/db";
 import { listByDate, toTree, createTask, setStatus, setUpdate, removeTask, setWeekTarget } from "@/lib/tasks";
 import { setSetting } from "@/lib/settings";
@@ -26,7 +27,7 @@ async function ownTaskOrAdmin(id: string, userId: string, isAdmin: boolean) {
 export async function setTaskStatusAction(input: { id: string; status: string }): Promise<Res> {
   try {
     const u = await requireUser();
-    await ownTaskOrAdmin(input.id, u.sub, u.role === "superadmin");
+    await ownTaskOrAdmin(input.id, u.sub, isManager(u.role));
     await setStatus(input.id, STATUSES.includes(input.status) ? input.status : "pending");
     revalidatePath("/updates");
     return { ok: true };
@@ -38,7 +39,7 @@ export async function setTaskStatusAction(input: { id: string; status: string })
 export async function saveTaskUpdateAction(input: { id: string; updateText: string }): Promise<Res> {
   try {
     const u = await requireUser();
-    await ownTaskOrAdmin(input.id, u.sub, u.role === "superadmin");
+    await ownTaskOrAdmin(input.id, u.sub, isManager(u.role));
     await setUpdate(input.id, input.updateText);
     revalidatePath("/updates");
     return { ok: true };
@@ -49,7 +50,7 @@ export async function saveTaskUpdateAction(input: { id: string; updateText: stri
 
 export async function createTaskAction(input: { userId: string; content: string; parentId?: string; date: string }): Promise<Res> {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireManager();
     if (!input.content.trim()) return { ok: false, error: "Type the task first." };
     await createTask({
       userId: input.userId,
@@ -67,7 +68,7 @@ export async function createTaskAction(input: { userId: string; content: string;
 
 export async function deleteTaskAction(input: { id: string }): Promise<Res> {
   try {
-    await requireAdmin();
+    await requireManager();
     await removeTask(input.id);
     revalidatePath("/updates");
     return { ok: true, message: "Removed" };
@@ -78,7 +79,7 @@ export async function deleteTaskAction(input: { id: string }): Promise<Res> {
 
 export async function setWeekTargetAction(input: { userId: string; text: string }): Promise<Res> {
   try {
-    await requireAdmin();
+    await requireManager();
     await setWeekTarget(input.userId, input.text);
     revalidatePath("/updates");
     return { ok: true, message: "Week target saved" };
@@ -89,7 +90,7 @@ export async function setWeekTargetAction(input: { userId: string; text: string 
 
 export async function setFooterAction(input: { text: string }): Promise<Res> {
   try {
-    await requireAdmin();
+    await requireManager();
     await setSetting("dayplan.footer", input.text);
     revalidatePath("/updates");
     return { ok: true, message: "Footer saved" };
@@ -111,7 +112,7 @@ export async function saveWipAction(input: { date: string; sections: WipSections
 
 export async function generateOverallAction(input: { date: string }): Promise<Res<string>> {
   try {
-    await requireAdmin();
+    await requireManager();
     const date = asDate(input.date);
     const [users, tasks] = await Promise.all([listUsers(), listByDate(date)]);
     const parts: string[] = [];
@@ -141,7 +142,7 @@ export async function generateOverallAction(input: { date: string }): Promise<Re
 /** Copy the most recent prior day's tasks into `date` — fresh, reset to pending. */
 export async function copyPreviousDayPlanAction(input: { date: string }): Promise<Res> {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireManager();
     const target = asDate(input.date);
     const all = await allRows("Tasks");
     const priorDates = [...new Set(all.filter((t) => t.date && t.date < target).map((t) => t.date))].sort();

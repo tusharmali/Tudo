@@ -34,9 +34,9 @@ export async function saveSubscription(
   });
 }
 
-export async function sendToAll(payload: { title: string; body: string; url?: string }): Promise<void> {
-  if (!ensureConfigured()) return;
-  const rows = await allRows("PushSubscriptions");
+type Payload = { title: string; body: string; url?: string };
+
+async function deliver(rows: { endpoint: string; p256dh: string; auth: string }[], payload: Payload): Promise<void> {
   const data = JSON.stringify(payload);
   const dead: string[] = [];
   await Promise.all(
@@ -50,4 +50,17 @@ export async function sendToAll(payload: { title: string; body: string; url?: st
     }),
   );
   if (dead.length) await deleteWhere("PushSubscriptions", (r) => dead.includes(r.endpoint));
+}
+
+export async function sendToAll(payload: Payload): Promise<void> {
+  if (!ensureConfigured()) return;
+  await deliver((await allRows("PushSubscriptions")) as unknown as { endpoint: string; p256dh: string; auth: string }[], payload);
+}
+
+/** Push only to the given user ids (for department / targeted broadcasts). */
+export async function sendToUsers(userIds: string[], payload: Payload): Promise<void> {
+  if (!ensureConfigured() || !userIds.length) return;
+  const set = new Set(userIds);
+  const rows = (await allRows("PushSubscriptions")).filter((r) => set.has(r.userId));
+  await deliver(rows as unknown as { endpoint: string; p256dh: string; auth: string }[], payload);
 }

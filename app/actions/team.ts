@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/dal";
-import { createUser } from "@/lib/users";
+import { requireManager, requireAdmin } from "@/lib/dal";
+import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment } from "@/lib/users";
 import { actionError, type Res } from "@/lib/action";
 import type { Role } from "@/lib/types";
+
+const ROLES: Role[] = ["employee", "hr", "superadmin"];
 
 export async function addTeammateAction(input: {
   name: string;
@@ -14,22 +16,68 @@ export async function addTeammateAction(input: {
   department: string;
 }): Promise<Res> {
   try {
-    await requireAdmin();
+    const me = await requireManager();
     if (!input.name?.trim() || !input.email?.trim() || !input.password) {
       return { ok: false, error: "Name, email and password are required." };
     }
     if (input.password.length < 6) {
       return { ok: false, error: "Password must be at least 6 characters." };
     }
+    let role: Role = ROLES.includes(input.role) ? input.role : "employee";
+    // Only a super-admin can mint another manager/admin.
+    if ((role === "superadmin" || role === "hr") && me.role !== "superadmin") role = "employee";
     const user = await createUser({
       name: input.name,
       email: input.email,
       password: input.password,
-      role: input.role === "superadmin" ? "superadmin" : "employee",
+      role,
       department: input.department,
     });
+    revalidatePath("/people");
     revalidatePath("/attendance");
     return { ok: true, message: `Added ${user.name}` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setUserSuspendedAction(input: { userId: string; suspended: boolean }): Promise<Res> {
+  try {
+    const me = await requireManager();
+    if (input.userId === me.sub) return { ok: false, error: "You can't suspend your own account." };
+    const target = await getUserById(input.userId);
+    if (!target) return { ok: false, error: "User not found." };
+    // Only a super-admin may suspend another super-admin (protects the owners).
+    if (target.role === "superadmin" && me.role !== "superadmin") {
+      return { ok: false, error: "Only a super-admin can suspend another super-admin." };
+    }
+    await setUserStatus(input.userId, input.suspended ? "suspended" : "active");
+    revalidatePath("/people");
+    return { ok: true, message: input.suspended ? `${target.name} suspended` : `${target.name} reactivated` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setUserDepartmentAction(input: { userId: string; department: string }): Promise<Res> {
+  try {
+    await requireManager();
+    await setUserDepartment(input.userId, input.department);
+    revalidatePath("/people");
+    return { ok: true, message: "Department updated" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setUserRoleAction(input: { userId: string; role: Role }): Promise<Res> {
+  try {
+    const me = await requireAdmin(); // role changes are super-admin only
+    if (!ROLES.includes(input.role)) return { ok: false, error: "Unknown role." };
+    if (input.userId === me.sub) return { ok: false, error: "You can't change your own role." };
+    await setUserRole(input.userId, input.role);
+    revalidatePath("/people");
+    return { ok: true, message: "Role updated" };
   } catch (e) {
     return actionError(e);
   }

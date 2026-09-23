@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { isManager } from "@/lib/roles";
 import { listForUser } from "@/lib/chat";
 import { listUsers, usersMap } from "@/lib/users";
 import ChatClient from "./ChatClient";
@@ -29,7 +30,7 @@ export default async function ChatPage() {
       chats={enriched}
       users={users.map((u) => ({ id: u.id, name: u.name }))}
       names={names}
-      isAdmin={user.role === "superadmin"}
+      isAdmin={isManager(user.role)}
     />
   );
 }

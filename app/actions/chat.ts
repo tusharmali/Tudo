@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser, requireAdmin } from "@/lib/dal";
+import { requireUser, requireManager } from "@/lib/dal";
 import { isMember, sendMessage, ensureDm, createGroup } from "@/lib/chat";
 import { actionError, type Res } from "@/lib/action";
 
@@ -33,7 +33,7 @@ export async function ensureDmAction(input: { otherId: string }): Promise<Res<st
 
 export async function createGroupAction(input: { name: string; department: string; memberIds: string[] }): Promise<Res<string>> {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireManager();
     if (!input.name.trim()) return { ok: false, error: "Give the group a name." };
     if (!input.memberIds?.length) return { ok: false, error: "Add at least one member." };
     const id = await createGroup(input.name.trim(), input.department, input.memberIds, admin.sub);

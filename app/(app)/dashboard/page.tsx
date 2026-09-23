@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { isManager } from "@/lib/roles";
 import { todayStr } from "@/lib/db";
+import DashboardTeam from "./DashboardTeam";
 import { getToday, listByDate } from "@/lib/attendance";
 import { statusForToday, listApprovedForDate, listPending } from "@/lib/leave";
 import { listForUser as listTasksForUser, toTree } from "@/lib/tasks";
@@ -12,17 +14,10 @@ import type { User } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-function initials(n: string): string {
-  return n.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
-
-const STATE_PILL: Record<string, string> = { in: "p-good", wfh: "p-sky", leave: "p-bad", out: "p-neut" };
-const STATE_LABEL: Record<string, string> = { in: "In office", wfh: "WFH", leave: "On leave", out: "Not in" };
-
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const isAdmin = user.role === "superadmin";
+  const isAdmin = isManager(user.role);
   const date = todayStr();
 
   const [settings, myAtt, myLeave, myTasks, notifs, releases] = await Promise.all([
@@ -202,18 +197,7 @@ export default async function DashboardPage() {
 
         <div className="stack">
           {isAdmin ? (
-            <div className="card pad">
-              <h3 className="sec" style={{ marginBottom: 12 }}>Who&apos;s in today</h3>
-              <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-                {roster.map(({ u, state }) => (
-                  <span className={`pill ${STATE_PILL[state]}`} key={u.id}>
-                    <span className="d" />
-                    {u.name.split(" ")[0]}
-                    {state !== "in" ? ` · ${STATE_LABEL[state]}` : ""}
-                  </span>
-                ))}
-              </div>
-            </div>
+            <DashboardTeam roster={roster.map(({ u, state }) => ({ id: u.id, name: u.name, dept: u.department || "—", state }))} />
           ) : (
             <div className="card pad">
               <div className="lbl">Next release</div>

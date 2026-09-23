@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { isManager } from "@/lib/roles";
 import { todayStr } from "@/lib/db";
 import { listByDate, listForUser, toTree, type TaskNode } from "@/lib/tasks";
 import { getWip } from "@/lib/wip";
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function UpdatesPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const user = await getCurrentUser();
   if (!user) return null;
-  const isAdmin = user.role === "superadmin";
+  const isAdmin = isManager(user.role);
   const today = todayStr();
   const sp = await searchParams;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date || "") ? (sp.date as string) : today;
@@ -48,7 +49,7 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
       overall,
     );
     admin = {
-      users: users.map((u) => ({ id: u.id, name: u.name, handle: u.handle })),
+      users: users.map((u) => ({ id: u.id, name: u.name, handle: u.handle, department: u.department })),
       tasksByUser,
       weekTargets,
       footer,

@@ -1,21 +1,36 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser, requireAdmin } from "@/lib/dal";
+import { requireUser, requireManager } from "@/lib/dal";
 import { create, markRead, remove, clearAll } from "@/lib/notifications";
-import { saveSubscription, sendToAll } from "@/lib/push";
+import { saveSubscription, sendToAll, sendToUsers } from "@/lib/push";
+import { listUsers } from "@/lib/users";
 import { actionError, type Res } from "@/lib/action";
 
-export async function pushBroadcastAction(input: { title: string; body: string }): Promise<Res> {
+export async function pushBroadcastAction(input: { title: string; body: string; target?: string }): Promise<Res> {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireManager();
     const title = input.title.trim();
     const body = input.body.trim();
     if (!title && !body) return { ok: false, error: "Add a title or a message." };
-    await create(title || "Announcement", body, "all", admin.sub);
-    await sendToAll({ title: title || "Tudo", body, url: "/dashboard" }).catch(() => {});
+
+    const dept = input.target && input.target !== "all" ? input.target : "";
+    let targetString = "all";
+    let recipientIds: string[] = [];
+    if (dept) {
+      const users = await listUsers();
+      recipientIds = users.filter((u) => u.department === dept && (u.status || "active") !== "suspended").map((u) => u.id);
+      if (!recipientIds.length) return { ok: false, error: `No active members in ${dept}.` };
+      targetString = recipientIds.join(",");
+    }
+
+    await create(title || "Announcement", body, targetString, admin.sub);
+    const payload = { title: title || "Tudo", body, url: "/dashboard" };
+    if (dept) await sendToUsers(recipientIds, payload).catch(() => {});
+    else await sendToAll(payload).catch(() => {});
+
     revalidatePath("/broadcast");
-    return { ok: true, message: "Broadcast sent to everyone 📣" };
+    return { ok: true, message: dept ? `Broadcast sent to ${dept} 📣` : "Broadcast sent to everyone 📣" };
   } catch (e) {
     return actionError(e);
   }
@@ -33,7 +48,7 @@ export async function markNotificationsReadAction(): Promise<Res> {
 
 export async function deleteNotificationAction(input: { id: string }): Promise<Res> {
   try {
-    await requireAdmin();
+    await requireManager();
     if (!input.id) return { ok: false, error: "Missing notification id." };
     const n = await remove(input.id);
     if (!n) return { ok: false, error: "Notification not found." };
@@ -46,7 +61,7 @@ export async function deleteNotificationAction(input: { id: string }): Promise<R
 
 export async function clearAllNotificationsAction(): Promise<Res> {
   try {
-    await requireAdmin();
+    await requireManager();
     const n = await clearAll();
     revalidatePath("/broadcast");
     return { ok: true, message: n ? `Cleared ${n} notification${n === 1 ? "" : "s"}` : "Nothing to clear" };

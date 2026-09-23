@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser, requireAdmin } from "@/lib/dal";
+import { requireUser, requireManager } from "@/lib/dal";
 import { todayStr } from "@/lib/db";
 import {
   getAttConfig,
@@ -107,7 +107,7 @@ export async function requestLeaveAction(input: {
 
 export async function decideLeaveAction(input: { id: string; decision: "approved" | "rejected" }): Promise<Res> {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireManager();
     await decide(input.id, input.decision, admin.sub);
     revalidatePath("/attendance");
     return { ok: true, message: `Request ${input.decision}` };
@@ -118,7 +118,7 @@ export async function decideLeaveAction(input: { id: string; decision: "approved
 
 export async function setOfficeAction(input: { lat: number; lng: number; radius: number }): Promise<Res> {
   try {
-    await requireAdmin();
+    await requireManager();
     if (!Number.isFinite(input.lat) || !Number.isFinite(input.lng)) {
       return { ok: false, error: "Couldn't read the location." };
     }

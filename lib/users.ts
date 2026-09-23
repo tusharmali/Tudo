@@ -104,6 +104,24 @@ export async function createUser(input: NewUser): Promise<User> {
   return user;
 }
 
+/** Manager: suspend / reactivate a user (suspended users can't sign in). */
+export async function setUserStatus(userId: string, status: "active" | "suspended"): Promise<void> {
+  const changed = await updateWhere("Users", (r) => r.id === userId, { status });
+  if (!changed) throw new Error("User not found.");
+}
+
+/** Super-admin: change a user's role. */
+export async function setUserRole(userId: string, role: Role): Promise<void> {
+  const changed = await updateWhere("Users", (r) => r.id === userId, { role });
+  if (!changed) throw new Error("User not found.");
+}
+
+/** Manager: move a user to a department. */
+export async function setUserDepartment(userId: string, department: string): Promise<void> {
+  const changed = await updateWhere("Users", (r) => r.id === userId, { department: department.trim() });
+  if (!changed) throw new Error("User not found.");
+}
+
 /** Admin: set a user's password directly (reset — no current-password check). */
 export async function setPassword(userId: string, newPassword: string): Promise<void> {
   if (!newPassword || newPassword.length < 6) throw new Error("Password must be at least 6 characters.");

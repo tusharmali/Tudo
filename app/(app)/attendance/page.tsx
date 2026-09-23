@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { isManager } from "@/lib/roles";
 import { listUsers, usersMap } from "@/lib/users";
 import { getAttConfig, officeIsSet, getToday, listByDate, type AttRecord } from "@/lib/attendance";
 import { statusForToday, listForUser, listPending, listApprovedForDate } from "@/lib/leave";
@@ -18,7 +19,7 @@ function initials(n: string): string {
 export default async function AttendancePage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const isAdmin = user.role === "superadmin";
+  const isAdmin = isManager(user.role);
 
   const [cfg, myToday, myStatus, myLeaves] = await Promise.all([
     getAttConfig(),

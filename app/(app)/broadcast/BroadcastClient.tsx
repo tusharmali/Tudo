@@ -8,10 +8,11 @@ import PushToggle from "@/components/PushToggle";
 
 type Recent = { id: string; title: string; body: string; when: string };
 
-export default function BroadcastClient({ recent }: { recent: Recent[] }) {
+export default function BroadcastClient({ recent, departments }: { recent: Recent[]; departments: string[] }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [target, setTarget] = useState("all");
   const [busy, setBusy] = useState(false);
   const [list, setList] = useState<Recent[]>(recent);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export default function BroadcastClient({ recent }: { recent: Recent[] }) {
       return;
     }
     setBusy(true);
-    const r = await pushBroadcastAction({ title, body });
+    const r = await pushBroadcastAction({ title, body, target });
     if (r.ok) {
       toast(r.message || "Sent");
       setTitle("");
@@ -80,6 +81,13 @@ export default function BroadcastClient({ recent }: { recent: Recent[] }) {
         <p className="muted tiny" style={{ margin: "0 0 16px" }}>
           Appears on every teammate&apos;s dashboard bell within seconds, and pushes to the phones of anyone who enabled notifications.
         </p>
+        <label className="lbl">Send to</label>
+        <select className="inp" value={target} onChange={(e) => setTarget(e.target.value)} style={{ marginBottom: 12 }}>
+          <option value="all">Everyone</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>{d} department</option>
+          ))}
+        </select>
         <input className="inp" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} style={{ marginBottom: 12 }} />
         <textarea className="inp" placeholder="Message" value={body} onChange={(e) => setBody(e.target.value)} style={{ minHeight: 110 }} />
         <div className="row" style={{ marginTop: 14, gap: 10, flexWrap: "wrap" }}>

@@ -14,3 +14,10 @@ export async function requireAdmin(): Promise<SessionUser> {
   if (u.role !== "superadmin") throw new Error("You don't have permission to do that.");
   return u;
 }
+
+/** Require a manager — super-admin OR hr. Used for people-ops surfaces. */
+export async function requireManager(): Promise<SessionUser> {
+  const u = await requireUser();
+  if (u.role !== "superadmin" && u.role !== "hr") throw new Error("You don't have permission to do that.");
+  return u;
+}
