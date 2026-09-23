@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   addPersonalTaskAction,
@@ -8,9 +8,42 @@ import {
   removePersonalTaskAction,
   addBookmarkAction,
   removeBookmarkAction,
+  saveNotesAction,
 } from "@/app/actions/personal";
 import { toast } from "@/components/Toaster";
 import type { PersonalTask, Bookmark } from "@/lib/personal";
+
+function Notepad({ initial }: { initial: string }) {
+  const [text, setText] = useState(initial);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirty = useRef(false);
+
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  function onChange(v: string) {
+    setText(v);
+    dirty.current = true;
+    setStatus("saving");
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(async () => {
+      const r = await saveNotesAction({ text: v });
+      setStatus(r.ok ? "saved" : "idle");
+      if (!r.ok) toast(r.error || "Couldn't save notes");
+      else dirty.current = false;
+    }, 800);
+  }
+
+  return (
+    <div className="card pad" style={{ gridColumn: "1 / -1" }}>
+      <div className="between" style={{ marginBottom: 10 }}>
+        <h3 className="sec" style={{ margin: 0 }}>Notepad</h3>
+        <span className="tiny faint">{status === "saving" ? "Saving…" : status === "saved" ? "Saved ✓" : "Autosaves as you type"}</span>
+      </div>
+      <textarea className="inp" style={{ minHeight: 200, fontFamily: "var(--mono)", fontSize: 13, lineHeight: 1.6 }} placeholder="Jot anything — meeting notes, ideas, to-remember…" value={text} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
 
 function fmtDue(due: string): string {
   const d = new Date(`${due}T00:00:00`);
@@ -24,7 +57,7 @@ function hostOf(url: string): string {
   }
 }
 
-export default function MyClient({ today, tasks, bookmarks }: { today: string; tasks: PersonalTask[]; bookmarks: Bookmark[] }) {
+export default function MyClient({ today, tasks, bookmarks, notes }: { today: string; tasks: PersonalTask[]; bookmarks: Bookmark[]; notes: string }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
@@ -157,6 +190,8 @@ export default function MyClient({ today, tasks, bookmarks }: { today: string; t
             </div>
           )}
         </div>
+
+        <Notepad initial={notes} />
       </div>
     </>
   );

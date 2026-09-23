@@ -1,6 +1,15 @@
 /** Per-user private items — personal reminders/tasks and bookmarks. These are
  *  the member's own, never the company-assigned day-plan tasks. */
 import { allRows, appendRow, updateWhere, deleteWhere, genId } from "./db";
+import { getSetting, setSetting } from "./settings";
+
+/** A single free-text notepad per user. */
+export async function getNotes(userId: string): Promise<string> {
+  return getSetting(`notes:${userId}`);
+}
+export async function setNotes(userId: string, text: string): Promise<void> {
+  await setSetting(`notes:${userId}`, (text || "").slice(0, 20000));
+}
 
 export interface PersonalTask {
   id: string;

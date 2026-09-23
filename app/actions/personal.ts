@@ -2,8 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal";
-import { addTask, setTaskDone, removeTask, addBookmark, removeBookmark } from "@/lib/personal";
+import { addTask, setTaskDone, removeTask, addBookmark, removeBookmark, setNotes } from "@/lib/personal";
 import { actionError, type Res } from "@/lib/action";
+
+export async function saveNotesAction(input: { text: string }): Promise<Res> {
+  try {
+    const u = await requireUser();
+    await setNotes(u.sub, input.text || "");
+    return { ok: true };
+  } catch (e) {
+    return actionError(e);
+  }
+}
 
 export async function addPersonalTaskAction(input: { text: string; due: string }): Promise<Res> {
   try {
