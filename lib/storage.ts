@@ -52,6 +52,14 @@ export async function putAvatar(userId: string, body: Buffer, contentType: strin
   return key;
 }
 
+/** Upload arbitrary bytes at a given key (e.g. expense receipts). */
+export async function putBytes(key: string, body: Buffer, contentType: string): Promise<string> {
+  await s3().send(
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType, CacheControl: "public, max-age=31536000, immutable" }),
+  );
+  return key;
+}
+
 export async function getObject(key: string): Promise<{ body: Buffer; contentType: string } | null> {
   try {
     const r = await s3().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
