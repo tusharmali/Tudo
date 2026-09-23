@@ -157,6 +157,17 @@ select.inp { cursor: pointer; }
 /* personal reminders checkbox */
 .chk { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface-2); cursor: pointer; flex: none; display: grid; place-items: center; font-size: 13px; color: #fff; }
 .chk.on { background: var(--good); border-color: var(--good); }
+/* who-reacted popover */
+.who-pop { z-index: 45; width: 240px; max-width: calc(100vw - 24px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); overflow: hidden; }
+.who-head { padding: 9px 12px; font-weight: 700; font-size: 12.5px; border-bottom: 1px solid var(--line); font-family: var(--round); }
+.who-list { max-height: 230px; overflow-y: auto; }
+.who-row { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 12px; background: none; border: none; border-bottom: 1px solid var(--line-soft); text-align: left; color: inherit; font: inherit; }
+.who-row:last-child { border-bottom: none; }
+.who-row.me { cursor: pointer; }
+.who-row.me:hover { background: var(--accent-wash); }
+.who-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.who-emoji { font-size: 15px; flex: none; }
+.who-remove { font-size: 10px; color: var(--bad); flex: none; }
 .reacts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 1px; }
 .react-chip { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); cursor: pointer; }
 .react-chip.mine { background: var(--accent-wash); border-color: var(--accent); color: var(--accent-ink); }

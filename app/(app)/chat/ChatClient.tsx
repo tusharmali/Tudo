@@ -155,6 +155,8 @@ export default function ChatClient({
   const [reactFor, setReactFor] = useState<string | null>(null);
   const [reactExpanded, setReactExpanded] = useState(false);
   const [reactPos, setReactPos] = useState<PopPos | null>(null);
+  const [whoFor, setWhoFor] = useState<string | null>(null); // message whose reactors are shown
+  const [whoPos, setWhoPos] = useState<PopPos | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiPos, setEmojiPos] = useState<PopPos | null>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
@@ -234,7 +236,7 @@ export default function ChatClient({
 
   // Close the emoji / reaction / theme pickers on an outside click.
   useEffect(() => {
-    if (!emojiOpen && !reactFor && !themeOpen) return;
+    if (!emojiOpen && !reactFor && !themeOpen && !whoFor) return;
     function onDoc(e: MouseEvent) {
       const t = e.target as Element;
       if (emojiOpen && emojiRef.current && !emojiRef.current.contains(t)) setEmojiOpen(false);
@@ -243,10 +245,11 @@ export default function ChatClient({
         setReactFor(null);
         setReactExpanded(false);
       }
+      if (whoFor && !(t.closest && (t.closest(".who-pop") || t.closest(".react-chip")))) setWhoFor(null);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [emojiOpen, reactFor, themeOpen]);
+  }, [emojiOpen, reactFor, themeOpen, whoFor]);
 
   // ---- polls ----
   const fetchMessages = useCallback(async () => {
@@ -322,6 +325,13 @@ export default function ChatClient({
     }
     return m;
   }, [reactions, me.id]);
+
+  const whoReactors = useMemo(() => {
+    if (!whoFor) return [] as [string, string[]][];
+    const byEmoji: Record<string, string[]> = {};
+    for (const r of reactions) if (r.messageId === whoFor) (byEmoji[r.emoji] ||= []).push(r.userId);
+    return Object.entries(byEmoji);
+  }, [whoFor, reactions]);
 
   const firstUnreadIdx = useMemo(() => {
     if (!separatorAt) return -1;
@@ -633,7 +643,7 @@ export default function ChatClient({
                 </div>
               )}
 
-              <div className={`chat-body theme-${theme}`} ref={bodyRef} onScroll={() => { if (reactFor) { setReactFor(null); setReactExpanded(false); } }}>
+              <div className={`chat-body theme-${theme}`} ref={bodyRef} onScroll={() => { if (reactFor) { setReactFor(null); setReactExpanded(false); } if (whoFor) setWhoFor(null); }}>
                 {loading && messages.length === 0 && (
                   <div className="chat-skel">
                     {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -692,7 +702,7 @@ export default function ChatClient({
                       {rx && (
                         <div className={`reacts ${mine ? "me" : "them"}`}>
                           {Object.entries(rx).map(([emoji, { count, mine: didI }]) => (
-                            <button key={emoji} type="button" className={`react-chip${didI ? " mine" : ""}`} onClick={() => react(m.id, emoji)}>
+                            <button key={emoji} type="button" className={`react-chip${didI ? " mine" : ""}`} title="See who reacted" onClick={(e) => { setWhoPos(anchorPop(e.currentTarget, 240)); setWhoFor(whoFor === m.id ? null : m.id); }}>
                               {emoji} {count}
                             </button>
                           ))}
@@ -702,6 +712,28 @@ export default function ChatClient({
                   );
                 })}
               </div>
+
+              {whoFor && whoPos && (
+                <div className="who-pop" style={{ position: "fixed", top: whoPos.top, left: whoPos.left, bottom: "auto", transform: whoPos.flip ? "none" : "translateY(-100%)" }}>
+                  <div className="who-head">Reactions</div>
+                  <div className="who-list">
+                    {whoReactors.map(([emoji, ids]) =>
+                      ids.map((uid) => {
+                        const info = names[uid];
+                        const isMe = uid === me.id;
+                        return (
+                          <button key={emoji + uid} type="button" className={`who-row${isMe ? " me" : ""}`} disabled={!isMe} onClick={() => { react(whoFor, emoji); setWhoFor(null); }}>
+                            <Avatar name={info?.name || "?"} color={info?.color} src={avatarSrc({ id: uid, avatar: info?.avatar })} size="sm" />
+                            <span className="who-name">{info?.name || "Someone"}{isMe ? " (you)" : ""}</span>
+                            <span className="who-emoji">{emoji}</span>
+                            {isMe && <span className="who-remove">tap to remove</span>}
+                          </button>
+                        );
+                      }),
+                    )}
+                  </div>
+                </div>
+              )}
 
               {readOnly ? (
                 <div className="chat-readonly">🔒 You&apos;re no longer in this group — you can read past messages but can&apos;t send new ones.</div>
