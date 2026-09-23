@@ -7,6 +7,7 @@ import {
   setUserSuspendedAction,
   setUserDepartmentAction,
   setUserRoleAction,
+  setUserEmailAction,
   setTwofaEnabledAction,
 } from "@/app/actions/team";
 import { resetPasswordAction } from "@/app/actions/account";
@@ -41,6 +42,8 @@ export default function PeopleClient({
   const [busy, setBusy] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "employee" as Role, department: "" });
+  const [editEmail, setEditEmail] = useState<string | null>(null);
+  const [emailDraft, setEmailDraft] = useState("");
 
   const filtered = users.filter((u) => {
     const s = q.trim().toLowerCase();
@@ -72,6 +75,19 @@ export default function PeopleClient({
   }
   function changeRole(u: Person, role: Role) {
     run(`role:${u.id}`, () => setUserRoleAction({ userId: u.id, role }));
+  }
+  function startEmail(u: Person) {
+    setEditEmail(u.id);
+    setEmailDraft(u.email);
+  }
+  async function saveEmail(u: Person) {
+    const email = emailDraft.trim().toLowerCase();
+    if (!email || email === u.email) {
+      setEditEmail(null);
+      return;
+    }
+    await run(`email:${u.id}`, () => setUserEmailAction({ userId: u.id, email }));
+    setEditEmail(null);
   }
   function resetPw(u: Person) {
     const next = prompt(`New password for ${u.name} (min 6 chars):`);
@@ -149,7 +165,29 @@ export default function PeopleClient({
                         <div className="avatar sm" style={{ background: u.color }}>{initials(u.name)}</div>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: 600 }}>{u.name}{isSelf ? " (you)" : ""}</div>
-                          <div className="tiny faint" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{u.email}</div>
+                          {editEmail === u.id ? (
+                            <div className="row" style={{ gap: 4, marginTop: 2 }}>
+                              <input
+                                className="inp"
+                                type="email"
+                                value={emailDraft}
+                                autoFocus
+                                onChange={(e) => setEmailDraft(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") saveEmail(u); if (e.key === "Escape") setEditEmail(null); }}
+                                style={{ padding: "3px 7px", fontSize: 12, width: 190 }}
+                              />
+                              <button className="chip" onClick={() => saveEmail(u)} disabled={busy === `email:${u.id}`} style={{ padding: "3px 8px", fontSize: 11 }} title="Save">✓</button>
+                              <button className="chip" onClick={() => setEditEmail(null)} style={{ padding: "3px 8px", fontSize: 11 }} title="Cancel">✕</button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => startEmail(u)}
+                              title="Click to edit email"
+                              style={{ background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit", color: "var(--ink-faint)", fontSize: 12, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}
+                            >
+                              {u.email} <span style={{ opacity: 0.7 }}>✎</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </td>

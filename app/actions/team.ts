@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireManager, requireAdmin } from "@/lib/dal";
-import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment } from "@/lib/users";
+import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail } from "@/lib/users";
 import { setTwofaEnabled } from "@/lib/twofa";
 import { actionError, type Res } from "@/lib/action";
 import type { Role } from "@/lib/types";
@@ -66,6 +66,17 @@ export async function setUserDepartmentAction(input: { userId: string; departmen
     await setUserDepartment(input.userId, input.department);
     revalidatePath("/people");
     return { ok: true, message: "Department updated" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setUserEmailAction(input: { userId: string; email: string }): Promise<Res> {
+  try {
+    await requireManager();
+    await setUserEmail(input.userId, input.email);
+    revalidatePath("/people");
+    return { ok: true, message: "Email updated" };
   } catch (e) {
     return actionError(e);
   }

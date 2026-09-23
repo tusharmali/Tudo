@@ -122,6 +122,18 @@ export async function setUserDepartment(userId: string, department: string): Pro
   if (!changed) throw new Error("User not found.");
 }
 
+/** Manager: change a user's login email (must be unique). */
+export async function setUserEmail(userId: string, email: string): Promise<void> {
+  const clean = email.trim().toLowerCase();
+  if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) throw new Error("Enter a valid email address.");
+  const rows = await allRows("Users");
+  if (!rows.some((r) => r.id === userId)) throw new Error("User not found.");
+  if (rows.some((r) => r.id !== userId && (r.email || "").trim().toLowerCase() === clean)) {
+    throw new Error("Another teammate already uses that email.");
+  }
+  await updateWhere("Users", (r) => r.id === userId, { email: clean });
+}
+
 /** Admin: set a user's password directly (reset — no current-password check). */
 export async function setPassword(userId: string, newPassword: string): Promise<void> {
   if (!newPassword || newPassword.length < 6) throw new Error("Password must be at least 6 characters.");
