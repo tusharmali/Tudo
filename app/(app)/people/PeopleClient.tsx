@@ -170,10 +170,7 @@ export default function PeopleClient({
                       <div className="row" style={{ gap: 10, minWidth: 0 }}>
                         <div className="avatar sm" style={{ background: u.color }}>{initials(u.name)}</div>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600 }}>
-                            {u.name}{isSelf ? " (you)" : ""}
-                            {isOwner && <span className="pill p-peri" style={{ marginLeft: 6, fontSize: 10, padding: "1px 7px" }}>Owner</span>}
-                          </div>
+                          <div style={{ fontWeight: 600 }}>{u.name}{isSelf ? " (you)" : ""}</div>
                           {locked ? (
                             <div className="tiny faint" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }} title="Only the owner can change this account">
                               {u.email} 🔒

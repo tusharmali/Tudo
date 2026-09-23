@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal";
 import { getUserById } from "@/lib/users";
+import { isManager } from "@/lib/roles";
 import { createConcern, addReply, setStatus, listRelated } from "@/lib/concerns";
 import { actionError, type Res } from "@/lib/action";
 
@@ -12,7 +13,7 @@ export async function createConcernAction(input: { toUserId: string; subject: st
     if (!input.toUserId) return { ok: false, error: "Pick who to send it to." };
     if (!input.subject.trim() || !input.message.trim()) return { ok: false, error: "Add a subject and a message." };
     const to = await getUserById(input.toUserId);
-    if (!to || to.role !== "superadmin") return { ok: false, error: "You can only send concerns to a super-admin." };
+    if (!to || !isManager(to.role)) return { ok: false, error: "You can only send concerns to an admin, director or HR." };
     await createConcern(u.sub, input.toUserId, input.subject.trim(), input.message.trim());
     revalidatePath("/concerns");
     return { ok: true, message: "Concern sent privately" };

@@ -20,7 +20,9 @@ export type SheetName =
   | "Notifications"
   | "PushSubscriptions"
   | "Settings"
-  | "Kudos";
+  | "Kudos"
+  | "Shoots"
+  | "Milestones";
 
 export const SCHEMA: Record<SheetName, string[]> = {
   Users: ["id", "name", "handle", "email", "passwordHash", "role", "department", "avatarColor", "phone", "status", "createdAt"],
@@ -40,6 +42,8 @@ export const SCHEMA: Record<SheetName, string[]> = {
   PushSubscriptions: ["id", "userId", "endpoint", "p256dh", "auth", "createdAt"],
   Settings: ["key", "value"],
   Kudos: ["id", "fromUserId", "toUserId", "category", "message", "createdAt"],
+  Shoots: ["id", "client", "title", "date", "status", "assigneeId", "notes", "createdBy", "createdAt"],
+  Milestones: ["id", "userId", "title", "targetDate", "status", "notes", "createdBy", "createdAt"],
 };
 
 /** Seeded into the Settings tab on init (only if the key is missing). */

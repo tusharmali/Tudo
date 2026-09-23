@@ -32,10 +32,12 @@ const icons = {
   account: svg(<><circle cx="12" cy="8" r="4" /><path strokeLinecap="round" strokeLinejoin="round" d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" /></>),
   people: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM21 20v-2a4 4 0 0 0-3-3.9M16 4.1a4 4 0 0 1 0 7.8" />),
   reports: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 20V4m0 16h16M8 16v-4m4 4V8m4 8v-6" />),
+  shoots: svg(<><rect x="3" y="7" width="18" height="12" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 7l1.5-2h5L16 7" /><circle cx="12" cy="13" r="3" /></>),
+  milestones: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M5 21V4m0 0 8 2-1.5 3L14 12l-9-2" />),
   refresh: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 0 0 6 5.3L4 8M4 15a8 8 0 0 0 14 3.7l2-2.7" />),
 };
 
-type NavItem = { href: string; label: string; icon: ReactNode; badge?: string };
+type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[] };
 type NavSection = { section: string | null; adminOnly?: boolean; items: NavItem[] };
 
 const NAV: NavSection[] = [
@@ -52,7 +54,9 @@ const NAV: NavSection[] = [
     items: [
       { href: "/concerns", label: "Concerns", icon: icons.concerns },
       { href: "/chat", label: "Chat", icon: icons.chat },
-      { href: "/releases", label: "Releases", icon: icons.releases },
+      { href: "/releases", label: "Releases", icon: icons.releases, depts: ["Tech"] },
+      { href: "/shoots", label: "Shoots & Clients", icon: icons.shoots, depts: ["Digi"] },
+      { href: "/milestones", label: "Milestones", icon: icons.milestones, depts: ["Support"] },
       { href: "/kudos", label: "Kudos", icon: icons.kudos },
       { href: "/fun", label: "Fun Zone", icon: icons.fun },
     ],
@@ -143,7 +147,12 @@ export default function Shell({ user, children }: { user: SessionUser; children:
 
   const first = user.name.split(" ")[0] || user.name;
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
-  const sections = NAV.filter((s) => !s.adminOnly || isManager(user.role));
+  // Managers see everything; employees see shared items + their department's items.
+  const canSeeItem = (item: NavItem) => isManager(user.role) || !item.depts || item.depts.includes(user.dept);
+  const sections = NAV
+    .filter((s) => !s.adminOnly || isManager(user.role))
+    .map((s) => ({ ...s, items: s.items.filter(canSeeItem) }))
+    .filter((s) => s.items.length > 0);
   const roleText = user.role === "employee" ? user.dept || "Employee" : roleLabel(user.role);
 
   return (

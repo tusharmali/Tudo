@@ -42,16 +42,16 @@ export default function ConcernsClient({
   me,
   concerns,
   repliesByConcern,
-  superAdmins,
+  recipients,
 }: {
   me: string;
   concerns: ConcernRow[];
   repliesByConcern: Record<string, ReplyRow[]>;
-  superAdmins: { id: string; name: string }[];
+  recipients: { id: string; name: string; role: string }[];
 }) {
   const router = useRouter();
   const [view, setView] = useState<string>(concerns.length ? concerns[0].id : "new");
-  const [toId, setToId] = useState(superAdmins[0]?.id || "");
+  const [toId, setToId] = useState(recipients[0]?.id || "");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
@@ -131,9 +131,9 @@ export default function ConcernsClient({
             </h3>
             <label className="lbl">Send to</label>
             <select className="inp" value={toId} onChange={(e) => setToId(e.target.value)} style={{ marginBottom: 12 }}>
-              {superAdmins.map((a) => (
+              {recipients.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.name} (Super Admin)
+                  {a.name} ({a.role})
                 </option>
               ))}
             </select>

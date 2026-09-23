@@ -26,6 +26,10 @@ function members(c: Chat): string[] {
   return c.memberIds.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+export function membersOf(c: Chat): string[] {
+  return members(c);
+}
+
 export async function listForUser(userId: string): Promise<Chat[]> {
   return (await allChats()).filter((c) => members(c).includes(userId));
 }

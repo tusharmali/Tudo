@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { isManager, roleLabel } from "@/lib/roles";
 import { listRelated, allReplies } from "@/lib/concerns";
 import { listUsers, usersMap } from "@/lib/users";
 import ConcernsClient, { type ConcernRow, type ReplyRow } from "./ConcernsClient";
@@ -39,7 +40,9 @@ export default async function ConcernsPage() {
     direction: c.fromUserId === user.sub ? "sent" : "received",
   }));
 
-  const superAdmins = users.filter((u) => u.role === "superadmin").map((u) => ({ id: u.id, name: u.name }));
+  const recipients = users
+    .filter((u) => isManager(u.role) && (u.status || "active") !== "suspended")
+    .map((u) => ({ id: u.id, name: u.name, role: roleLabel(u.role) }));
 
-  return <ConcernsClient me={user.sub} concerns={concerns} repliesByConcern={repliesByConcern} superAdmins={superAdmins} />;
+  return <ConcernsClient me={user.sub} concerns={concerns} repliesByConcern={repliesByConcern} recipients={recipients} />;
 }
