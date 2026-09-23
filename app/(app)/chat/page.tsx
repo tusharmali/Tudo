@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
 import { listUsers } from "@/lib/users";
 import { chatViewFor } from "@/lib/chat-view";
+import { getChatTheme } from "@/lib/chat";
 import ChatClient from "./ChatClient";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export default async function ChatPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const [{ chats, overview }, users] = await Promise.all([chatViewFor(user), listUsers()]);
+  const [{ chats, overview }, users, theme] = await Promise.all([chatViewFor(user), listUsers(), getChatTheme(user.sub)]);
   const mgr = isManager(user.role);
 
   const names: Record<string, { name: string; color: string; avatar: string }> = {};
@@ -31,6 +32,7 @@ export default async function ChatPage() {
       allUsers={allUsers}
       names={names}
       overview={overview}
+      theme={theme}
       isAdmin={mgr}
     />
   );

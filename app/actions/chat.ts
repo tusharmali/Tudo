@@ -10,9 +10,11 @@ import {
   membersOf,
   renameGroup,
   setGroupMembers,
+  leaveGroup,
   toggleReaction,
   markChatRead,
   setChatMuted,
+  setChatTheme,
   getMessage,
 } from "@/lib/chat";
 import { getSettings } from "@/lib/settings";
@@ -160,6 +162,28 @@ export async function markChatReadAction(input: { chatId: string }): Promise<Res
   try {
     const u = await requireUser();
     if (input.chatId) await markChatRead(u.sub, input.chatId);
+    return { ok: true };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function leaveGroupAction(input: { chatId: string }): Promise<Res> {
+  try {
+    const u = await requireUser();
+    const ok = await leaveGroup(input.chatId, u.sub);
+    if (!ok) return { ok: false, error: "You can't leave this group (owners stay with their group)." };
+    revalidatePath("/chat");
+    return { ok: true, message: "You left the group — past messages stay visible." };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setChatThemeAction(input: { theme: string }): Promise<Res> {
+  try {
+    const u = await requireUser();
+    await setChatTheme(u.sub, input.theme);
     return { ok: true };
   } catch (e) {
     return actionError(e);

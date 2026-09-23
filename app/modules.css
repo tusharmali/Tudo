@@ -118,6 +118,24 @@ select.inp { cursor: pointer; }
 .emoji-pop { position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 40; width: 272px; max-width: calc(100vw - 40px); max-height: min(46vh, 220px); overflow-y: auto; display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); }
 .emoji-pop button { font-size: 19px; padding: 3px; border-radius: 6px; cursor: pointer; transition: transform .1s; }
 .emoji-pop button:hover { background: var(--accent-wash); transform: scale(1.15); }
+/* chat background themes */
+.chat-body.theme-plain { background: var(--surface-2); }
+.chat-body.theme-mint { background: linear-gradient(180deg, #eef8f1, #e2f1e9); }
+.chat-body.theme-blush { background: linear-gradient(180deg, #fdeef2, #fbe3ec); }
+.chat-body.theme-sky { background: linear-gradient(180deg, #eef4fd, #e1ecfb); }
+.chat-body.theme-sand { background: linear-gradient(180deg, #f8f3ea, #f1e7d6); }
+.chat-body.theme-graphite { background: #2b2f3a; }
+.theme-pop { position: absolute; top: 42px; right: 0; z-index: 40; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); }
+.theme-sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; }
+.theme-sw.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-wash); }
+.theme-sw.sw-default { background: linear-gradient(135deg, var(--accent-wash), var(--surface-3)); }
+.theme-sw.sw-plain { background: var(--surface-2); }
+.theme-sw.sw-mint { background: #d7efe0; }
+.theme-sw.sw-blush { background: #f8dbe6; }
+.theme-sw.sw-sky { background: #d9e6fb; }
+.theme-sw.sw-sand { background: #efe3cc; }
+.theme-sw.sw-graphite { background: #2b2f3a; }
+.chat-readonly { padding: 14px 18px; border-top: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); font-size: 12.5px; text-align: center; }
 .reacts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 1px; }
 .react-chip { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); cursor: pointer; }
 .react-chip.mine { background: var(--accent-wash); border-color: var(--accent); color: var(--accent-ink); }

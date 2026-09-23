@@ -35,7 +35,7 @@ export const SCHEMA: Record<SheetName, string[]> = {
   WIP: ["id", "userId", "date", "content", "createdAt"],
   Concerns: ["id", "fromUserId", "toUserId", "subject", "message", "status", "createdAt"],
   ConcernReplies: ["id", "concernId", "userId", "message", "createdAt"],
-  Chats: ["id", "type", "name", "department", "memberIds", "createdBy", "createdAt"],
+  Chats: ["id", "type", "name", "department", "memberIds", "formerMembers", "createdBy", "createdAt"],
   Messages: ["id", "chatId", "fromUserId", "content", "createdAt"],
   Reactions: ["id", "messageId", "userId", "emoji", "createdAt"],
   Releases: ["id", "title", "scheduledDate", "points", "resources", "status", "createdAt"],

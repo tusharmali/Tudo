@@ -11,16 +11,27 @@ import {
   setChatMutedAction,
   reactMessageAction,
   markChatReadAction,
+  leaveGroupAction,
+  setChatThemeAction,
 } from "@/app/actions/chat";
 import { toast } from "@/components/Toaster";
 import Avatar, { avatarSrc, initials } from "@/components/Avatar";
 
-type ChatRow = { id: string; type: string; name: string; createdBy: string; memberIds: string; otherId: string };
+type ChatRow = { id: string; type: string; name: string; createdBy: string; memberIds: string; otherId: string; readOnly: boolean };
+const THEMES: { key: string; label: string }[] = [
+  { key: "default", label: "Default" },
+  { key: "plain", label: "Plain" },
+  { key: "mint", label: "Mint" },
+  { key: "blush", label: "Blush" },
+  { key: "sky", label: "Sky" },
+  { key: "sand", label: "Sand" },
+  { key: "graphite", label: "Graphite" },
+];
 type Msg = { id: string; chatId: string; fromUserId: string; content: string; createdAt: string };
 type Reaction = { id: string; messageId: string; userId: string; emoji: string; createdAt: string };
 type UserLite = { id: string; name: string };
 type NameInfo = { name: string; color: string; avatar: string };
-type Overview = { chatId: string; lastText: string; lastAt: string; lastFrom: string; unread: number; readAt: string; muted: boolean };
+type Overview = { chatId: string; lastText: string; lastAt: string; lastFrom: string; unread: number; readAt: string; muted: boolean; readOnly: boolean };
 
 const SmileyIcon = ({ s = 18 }: { s?: number }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: s, height: s, strokeWidth: 1.9 }}>
@@ -62,6 +73,7 @@ export default function ChatClient({
   allUsers,
   names,
   overview: overviewInit,
+  theme: themeInit,
   isAdmin,
 }: {
   me: UserLite;
@@ -70,11 +82,16 @@ export default function ChatClient({
   allUsers: UserLite[];
   names: Record<string, NameInfo>;
   overview: Record<string, Overview>;
+  theme: string;
   isAdmin: boolean;
 }) {
   const searchParams = useSearchParams();
   const [chats, setChats] = useState(chatsInit);
   const [overview, setOverview] = useState(overviewInit);
+  const [theme, setTheme] = useState(themeInit);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const themeRef = useRef<HTMLDivElement>(null);
   const [activeId, setActiveId] = useState("");
   const [server, setServer] = useState<Msg[]>([]);
   const [pending, setPending] = useState<Msg[]>([]);
@@ -156,12 +173,13 @@ export default function ChatClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Close the emoji / reaction pickers on an outside click.
+  // Close the emoji / reaction / theme pickers on an outside click.
   useEffect(() => {
-    if (!emojiOpen && !reactFor) return;
+    if (!emojiOpen && !reactFor && !themeOpen) return;
     function onDoc(e: MouseEvent) {
       const t = e.target as Element;
       if (emojiOpen && emojiRef.current && !emojiRef.current.contains(t)) setEmojiOpen(false);
+      if (themeOpen && themeRef.current && !themeRef.current.contains(t)) setThemeOpen(false);
       if (reactFor && !(t.closest && t.closest(".react-wrap"))) {
         setReactFor(null);
         setReactExpanded(false);
@@ -169,7 +187,7 @@ export default function ChatClient({
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [emojiOpen, reactFor]);
+  }, [emojiOpen, reactFor, themeOpen]);
 
   // ---- polls ----
   const fetchMessages = useCallback(async () => {
@@ -351,6 +369,26 @@ export default function ChatClient({
     setMuteBusy(false);
   }
 
+  async function leaveActive() {
+    if (!active || leaving) return;
+    if (!window.confirm(`Leave "${active.name}"? You'll keep read-only access to past messages.`)) return;
+    setLeaving(true);
+    const r = await leaveGroupAction({ chatId: active.id });
+    if (r.ok) {
+      toast(r.message || "Left");
+      setEditOpen(false);
+      await refreshOverview();
+    } else toast(r.error || "Error");
+    setLeaving(false);
+  }
+
+  async function pickTheme(t: string) {
+    setTheme(t);
+    setThemeOpen(false);
+    const r = await setChatThemeAction({ theme: t });
+    if (!r.ok) toast(r.error || "Error");
+  }
+
   async function react(messageId: string, emoji: string) {
     setReactFor(null);
     setReactions((prev) => {
@@ -369,7 +407,9 @@ export default function ChatClient({
     return <Avatar name={c.name} color={info?.color} src={avatarSrc({ id: c.otherId, avatar: info?.avatar })} size={size} />;
   }
 
-  const canEdit = !!active && active.type === "group" && (isAdmin || active.createdBy === me.id);
+  const readOnly = !!(active && (active.readOnly || overview[active.id]?.readOnly));
+  const canEdit = !!active && active.type === "group" && !readOnly && (isAdmin || active.createdBy === me.id);
+  const canLeave = !!active && active.type === "group" && !readOnly && active.createdBy !== me.id && active.memberIds.split(",").map((s) => s.trim()).includes(me.id);
   const muted = !!(active && overview[active.id]?.muted);
 
   return (
@@ -461,15 +501,34 @@ export default function ChatClient({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="ellip" style={{ fontWeight: 650, fontSize: 14 }}>{active.name}</div>
                   <div className="tiny faint">
-                    {active.type === "group" ? `${active.memberIds.split(",").filter(Boolean).length} members` : "Direct message"}
+                    {readOnly ? "You left · read-only" : active.type === "group" ? `${active.memberIds.split(",").filter(Boolean).length} members` : "Direct message"}
                   </div>
                 </div>
-                <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={toggleMute} disabled={muteBusy} title={muted ? "Unmute" : "Mute"}>
-                  <span style={{ fontSize: 15 }}>{muted ? "🔕" : "🔔"}</span>
-                </button>
+                <div className="emoji-wrap" ref={themeRef}>
+                  <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setThemeOpen((v) => !v)} title="Background">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3a9 9 0 1 0 0 18c1 0 1.6-.9 1.6-1.6 0-.4-.2-.7-.4-1s-.4-.6-.4-1c0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8Z" /><circle cx="7.7" cy="11.7" r=".9" /><circle cx="12" cy="8.2" r=".9" /><circle cx="16.3" cy="11.7" r=".9" /></svg>
+                  </button>
+                  {themeOpen && (
+                    <div className="theme-pop">
+                      {THEMES.map((t) => (
+                        <button key={t.key} type="button" className={`theme-sw sw-${t.key}${theme === t.key ? " on" : ""}`} title={t.label} onClick={() => pickTheme(t.key)} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {!readOnly && (
+                  <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={toggleMute} disabled={muteBusy} title={muted ? "Unmute" : "Mute"}>
+                    <span style={{ fontSize: 15 }}>{muted ? "🔕" : "🔔"}</span>
+                  </button>
+                )}
                 {canEdit && (
                   <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={beginEdit} title="Edit group">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" /></svg>
+                  </button>
+                )}
+                {canLeave && (
+                  <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={leaveActive} disabled={leaving} title="Leave group">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12H3m0 0 4-4m-4 4 4 4M13 5h5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5" /></svg>
                   </button>
                 )}
               </div>
@@ -502,7 +561,7 @@ export default function ChatClient({
                 </div>
               )}
 
-              <div className="chat-body" ref={bodyRef}>
+              <div className={`chat-body theme-${theme}`} ref={bodyRef}>
                 {messages.length === 0 && (
                   <p className="tiny faint" style={{ margin: "auto" }}>{loading ? "Loading messages…" : "No messages yet — say hi 👋"}</p>
                 )}
@@ -520,7 +579,7 @@ export default function ChatClient({
                           <span className="btext">{m.content}</span>
                           <span className="bt">{fmtTime(m.createdAt)}</span>
                         </div>
-                        {!m.id.startsWith("tmp_") && (
+                        {!m.id.startsWith("tmp_") && !readOnly && (
                           <div className="react-wrap">
                             <button className="react-add" type="button" onClick={() => { setReactFor(reactFor === m.id ? null : m.id); setReactExpanded(false); }} title="React"><SmileyIcon s={15} /></button>
                             {reactFor === m.id && (
@@ -550,26 +609,30 @@ export default function ChatClient({
                 })}
               </div>
 
-              <div className="chat-input">
-                <div className="emoji-wrap" ref={emojiRef}>
-                  <button type="button" className="emoji-btn" onClick={() => setEmojiOpen((v) => !v)} title="Emoji"><SmileyIcon s={19} /></button>
-                  {emojiOpen && (
-                    <div className="emoji-pop">
-                      {ALL_EMOJIS.map((e) => (
-                        <button key={e} type="button" onClick={() => setInput((s) => s + e)}>{e}</button>
-                      ))}
-                    </div>
-                  )}
+              {readOnly ? (
+                <div className="chat-readonly">🔒 You&apos;re no longer in this group — you can read past messages but can&apos;t send new ones.</div>
+              ) : (
+                <div className="chat-input">
+                  <div className="emoji-wrap" ref={emojiRef}>
+                    <button type="button" className="emoji-btn" onClick={() => setEmojiOpen((v) => !v)} title="Emoji"><SmileyIcon s={19} /></button>
+                    {emojiOpen && (
+                      <div className="emoji-pop">
+                        {ALL_EMOJIS.map((e) => (
+                          <button key={e} type="button" onClick={() => setInput((s) => s + e)}>{e}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <input placeholder="Message…" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
+                  <button className="send" onClick={send} type="button" disabled={sending} title="Send">
+                    {sending ? (
+                      <span className="spin-dot" />
+                    ) : (
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m22 2-7 20-4-9-9-4 20-7Z" /></svg>
+                    )}
+                  </button>
                 </div>
-                <input placeholder="Message…" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
-                <button className="send" onClick={send} type="button" disabled={sending} title="Send">
-                  {sending ? (
-                    <span className="spin-dot" />
-                  ) : (
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m22 2-7 20-4-9-9-4 20-7Z" /></svg>
-                  )}
-                </button>
-              </div>
+              )}
             </>
           ) : (
             <div className="empty" style={{ margin: "auto" }}>

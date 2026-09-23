@@ -16,6 +16,7 @@ export interface EnrichedChat {
   createdBy: string;
   memberIds: string;
   otherId: string;
+  readOnly: boolean; // former member — read-only history
 }
 
 export async function chatViewFor(user: SessionUser): Promise<{ chats: EnrichedChat[]; overview: Record<string, ChatOverview> }> {
@@ -29,7 +30,7 @@ export async function chatViewFor(user: SessionUser): Promise<{ chats: EnrichedC
       const name = c.type === "dm" ? other?.name || "Direct message" : c.name;
       // Employees see group chats they're in + DMs within their dept or with a manager.
       const visible = mgr || c.type !== "dm" || other?.department === user.dept || (other ? isManager(other.role) : false);
-      return { id: c.id, type: c.type, name, createdBy: c.createdBy, memberIds: c.memberIds, otherId, visible };
+      return { id: c.id, type: c.type, name, createdBy: c.createdBy, memberIds: c.memberIds, otherId, readOnly: overview[c.id]?.readOnly || false, visible };
     })
     .filter((c) => c.visible)
     .map(({ visible: _v, ...rest }) => rest);
