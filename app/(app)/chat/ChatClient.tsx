@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   sendMessageAction,
   ensureDmAction,
@@ -58,6 +58,7 @@ export default function ChatClient({
   isAdmin: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [overview, setOverview] = useState(overviewInit);
   const [activeId, setActiveId] = useState("");
   const [server, setServer] = useState<Msg[]>([]);
@@ -127,6 +128,14 @@ export default function ChatClient({
     return () => window.removeEventListener("popstate", onPop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Deep-link via Next navigation (e.g. clicking a chat notification while
+  // already on /chat) — open the requested conversation.
+  useEffect(() => {
+    const c = searchParams.get("c");
+    if (c && c !== activeId && chats.some((x) => x.id === c)) openChat(c, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // ---- polls ----
   const fetchMessages = useCallback(async () => {
