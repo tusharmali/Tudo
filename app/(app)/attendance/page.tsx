@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
 import { listUsers, usersMap } from "@/lib/users";
 import { getAttConfig, officeIsSet, getToday, listByDate, type AttRecord } from "@/lib/attendance";
-import { statusForToday, listForUser, listPending, listApprovedForDate } from "@/lib/leave";
+import { statusForToday, listForUser, listPending, listApprovedForDate, listUpcomingApproved } from "@/lib/leave";
 import type { User } from "@/lib/types";
 import CheckInCard from "./CheckInCard";
 import LeaveForm from "./LeaveForm";
@@ -28,15 +28,18 @@ export default async function AttendancePage() {
     listForUser(user.sub),
   ]);
 
+  type ReqRow = { id: string; userName: string; type: string; fromDate: string; toDate: string; reason: string };
   let roster: RosterRow[] = [];
-  let pending: { id: string; userName: string; type: string; fromDate: string; toDate: string; reason: string }[] = [];
+  let pending: ReqRow[] = [];
+  let approvedReqs: ReqRow[] = [];
 
   if (isAdmin) {
-    const [users, today, approved, pend, umap] = await Promise.all([
+    const [users, today, approved, pend, upcoming, umap] = await Promise.all([
       listUsers(),
       listByDate(),
       listApprovedForDate(),
       listPending(),
+      listUpcomingApproved(),
       usersMap(),
     ]);
     roster = users.map((u) => {
@@ -62,14 +65,16 @@ export default async function AttendancePage() {
       }
       return { u, rec, label, cls };
     });
-    pending = pend.map((p) => ({
+    const mapReq = (p: { id: string; userId: string; type: string; fromDate: string; toDate: string; reason: string }): ReqRow => ({
       id: p.id,
       userName: umap[p.userId]?.name || "Unknown",
       type: p.type,
       fromDate: p.fromDate,
       toDate: p.toDate,
       reason: p.reason,
-    }));
+    });
+    pending = pend.map(mapReq);
+    approvedReqs = upcoming.map(mapReq);
   }
 
   return (
@@ -81,7 +86,7 @@ export default async function AttendancePage() {
 
       {isAdmin && (
         <>
-          <AdminTools pending={pending} radiusM={cfg.radiusM} officeSet={officeIsSet(cfg)} />
+          <AdminTools pending={pending} approved={approvedReqs} radiusM={cfg.radiusM} officeSet={officeIsSet(cfg)} />
           <div className="card">
             <div className="between" style={{ padding: "18px 22px 6px" }}>
               <h3 className="sec">Team attendance · today</h3>

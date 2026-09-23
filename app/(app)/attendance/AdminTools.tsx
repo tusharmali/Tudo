@@ -12,10 +12,12 @@ import { getCurrentCoords as getPosition } from "@/lib/geo";
 
 export default function AdminTools({
   pending,
+  approved,
   radiusM,
   officeSet,
 }: {
   pending: Pending[];
+  approved: Pending[];
   radiusM: number;
   officeSet: boolean;
 }) {
@@ -65,6 +67,16 @@ export default function AdminTools({
     const res = await decideLeaveAction({ id, decision });
     if (res.ok) {
       toast(res.message || "Done");
+      router.refresh();
+    } else toast(res.error || "Error");
+  }
+
+  async function revoke(p: Pending) {
+    const range = p.fromDate + (p.toDate && p.toDate !== p.fromDate ? ` → ${p.toDate}` : "");
+    if (!window.confirm(`Revoke ${p.userName}'s approved ${p.type.toUpperCase()} (${range})? They'll be notified.`)) return;
+    const res = await decideLeaveAction({ id: p.id, decision: "rejected" });
+    if (res.ok) {
+      toast(res.message || "Revoked");
       router.refresh();
     } else toast(res.error || "Error");
   }
@@ -146,6 +158,32 @@ export default function AdminTools({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {approved.length > 0 && (
+          <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+            <div className="tiny faint" style={{ fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".04em" }}>
+              Approved · revoke if needed
+            </div>
+            <div className="stack" style={{ gap: 10 }}>
+              {approved.map((p) => (
+                <div key={p.id} className="between" style={{ gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="tiny" style={{ fontWeight: 650 }}>
+                      {p.userName} · <span style={{ textTransform: "capitalize" }}>{p.type}</span>
+                    </div>
+                    <div className="tiny faint">
+                      {p.fromDate}
+                      {p.toDate && p.toDate !== p.fromDate ? ` → ${p.toDate}` : ""}
+                    </div>
+                  </div>
+                  <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12, flex: "none" }} onClick={() => revoke(p)}>
+                    Revoke
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

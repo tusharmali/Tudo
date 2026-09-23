@@ -12,8 +12,12 @@ import {
   setOffice,
   nowHM,
 } from "@/lib/attendance";
-import { statusForToday, createLeave, decide, type LeaveType } from "@/lib/leave";
+import { statusForToday, createLeave, decide, getLeave, type LeaveType } from "@/lib/leave";
+import { create as createNotification } from "@/lib/notifications";
+import { sendToUsers } from "@/lib/push";
 import { actionError, type Res } from "@/lib/action";
+
+const fmtRange = (from: string, to: string) => from + (to && to !== from ? ` → ${to}` : "");
 
 export type Coords = { lat: number; lng: number; accuracy: number };
 
@@ -108,9 +112,27 @@ export async function requestLeaveAction(input: {
 export async function decideLeaveAction(input: { id: string; decision: "approved" | "rejected" }): Promise<Res> {
   try {
     const admin = await requireManager();
+    const req = await getLeave(input.id);
+    if (!req) return { ok: false, error: "Request not found." };
+    const wasApproved = req.status === "approved";
     await decide(input.id, input.decision, admin.sub);
+
+    // Notify the member (bell + push).
+    const label = req.type === "wfh" ? "WFH" : "Leave";
+    const range = fmtRange(req.fromDate, req.toDate);
+    const revoked = wasApproved && input.decision === "rejected";
+    const title = input.decision === "approved" ? `${label} approved ✅` : revoked ? `${label} revoked ⚠️` : `${label} not approved`;
+    const body = input.decision === "approved"
+      ? `Your ${label} for ${range} was approved by ${admin.name}.`
+      : revoked
+        ? `Your approved ${label} for ${range} was revoked by ${admin.name} — please check in as usual or contact them.`
+        : `Your ${label} request for ${range} was declined by ${admin.name}.`;
+    await createNotification(title, body, req.userId, admin.sub);
+    await sendToUsers([req.userId], { title, body, url: "/attendance" }).catch(() => {});
+
     revalidatePath("/attendance");
-    return { ok: true, message: `Request ${input.decision}` };
+    revalidatePath("/dashboard");
+    return { ok: true, message: revoked ? `${label} revoked — member notified` : `Request ${input.decision} — member notified` };
   } catch (e) {
     return actionError(e);
   }

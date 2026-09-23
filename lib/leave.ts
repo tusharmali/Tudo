@@ -49,6 +49,15 @@ export async function listPending(): Promise<LeaveReq[]> {
   return (await all()).filter((r) => r.status === "pending");
 }
 
+export async function getLeave(id: string): Promise<LeaveReq | null> {
+  return (await all()).find((r) => r.id === id) ?? null;
+}
+
+/** Approved requests whose window hasn't ended yet — revocable by a manager. */
+export async function listUpcomingApproved(date = todayStr()): Promise<LeaveReq[]> {
+  return (await all()).filter((r) => r.status === "approved" && (r.toDate || r.fromDate) >= date);
+}
+
 export async function listApprovedForDate(date = todayStr()): Promise<LeaveReq[]> {
   return (await all()).filter(
     (r) => r.status === "approved" && r.fromDate <= date && date <= (r.toDate || r.fromDate),
