@@ -9,6 +9,7 @@
  */
 import { config } from "dotenv";
 config({ path: ".env.local" });
+config({ path: ".env" });
 import { neon } from "@neondatabase/serverless";
 import { JWT } from "google-auth-library";
 import { SCHEMA } from "../lib/schema";

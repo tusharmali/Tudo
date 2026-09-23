@@ -8,6 +8,7 @@
  */
 import { config } from "dotenv";
 config({ path: ".env.local" });
+config({ path: ".env" });
 
 import { JWT } from "google-auth-library";
 import { POST as registerPOST, OPTIONS as registerOPTIONS } from "../app/api/zoxo/register/route";

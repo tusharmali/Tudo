@@ -8,6 +8,7 @@
  */
 import { config } from "dotenv";
 config({ path: ".env.local" });
+config({ path: ".env" });
 
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
