@@ -22,6 +22,7 @@ export default async function KudosPage() {
     const cat = categoryMeta(k.category);
     return {
       id: k.id,
+      fromUserId: k.fromUserId,
       fromName: umap[k.fromUserId]?.name || "Someone",
       toName: umap[k.toUserId]?.name || "Someone",
       emoji: cat.emoji,
@@ -43,5 +44,5 @@ export default async function KudosPage() {
     .filter((u) => u.id !== user.sub && (mgr || u.department === user.dept))
     .map((u) => ({ id: u.id, name: u.name }));
 
-  return <KudosClient recipients={recipients} feed={feed} leaderboard={leaderboard} categories={KUDO_CATEGORIES} />;
+  return <KudosClient me={user.sub} canModerate={mgr} recipients={recipients} feed={feed} leaderboard={leaderboard} categories={KUDO_CATEGORIES} />;
 }

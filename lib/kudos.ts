@@ -1,4 +1,4 @@
-import { allRows, appendRow, genId } from "./db";
+import { allRows, appendRow, deleteWhere, genId } from "./db";
 
 export interface Kudo {
   id: string;
@@ -35,4 +35,12 @@ export async function giveKudo(fromUserId: string, toUserId: string, category: s
     message,
     createdAt: new Date().toISOString(),
   });
+}
+
+export async function getKudo(id: string): Promise<Kudo | null> {
+  return (await listKudos()).find((k) => k.id === id) ?? null;
+}
+
+export async function removeKudo(id: string): Promise<void> {
+  await deleteWhere("Kudos", (r) => r.id === id);
 }

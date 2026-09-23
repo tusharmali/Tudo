@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/dal";
 import { isManager } from "@/lib/roles";
 import { createMilestone, setMilestoneStatus, removeMilestone, getMilestone, MILESTONE_STATUSES } from "@/lib/milestones";
 import { actionError, type Res } from "@/lib/action";
+import { logAction } from "@/lib/audit";
 import type { SessionUser } from "@/lib/types";
 
 const SUPPORT = "Support";
@@ -18,6 +19,7 @@ export async function createMilestoneAction(input: { title: string; targetDate: 
     if (!canUse(u)) throw new Error("Only the Support team can add milestones.");
     if (!input.title?.trim()) return { ok: false, error: "Add a milestone title." };
     await createMilestone({ userId: u.sub, title: input.title, targetDate: input.targetDate || "", notes: input.notes || "", createdBy: u.sub });
+    await logAction(u, "Milestones", "Added a milestone", input.title.trim().slice(0, 80));
     revalidatePath("/milestones");
     return { ok: true, message: "Milestone added" };
   } catch (e) {
@@ -49,6 +51,7 @@ export async function deleteMilestoneAction(input: { id: string }): Promise<Res>
     const u = await requireUser();
     await ownOrManager(input.id, u);
     await removeMilestone(input.id);
+    await logAction(u, "Milestones", "Removed a milestone", "");
     revalidatePath("/milestones");
     return { ok: true, message: "Removed" };
   } catch (e) {

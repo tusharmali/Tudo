@@ -34,6 +34,7 @@ const icons = {
   reports: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 20V4m0 16h16M8 16v-4m4 4V8m4 8v-6" />),
   shoots: svg(<><rect x="3" y="7" width="18" height="12" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 7l1.5-2h5L16 7" /><circle cx="12" cy="13" r="3" /></>),
   milestones: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M5 21V4m0 0 8 2-1.5 3L14 12l-9-2" />),
+  logs: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M9 5h9M9 12h9M9 19h9M4.5 5h.01M4.5 12h.01M4.5 19h.01" />),
   refresh: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 0 0 6 5.3L4 8M4 15a8 8 0 0 0 14 3.7l2-2.7" />),
 };
 
@@ -67,6 +68,7 @@ const NAV: NavSection[] = [
     items: [
       { href: "/people", label: "People", icon: icons.people },
       { href: "/reports", label: "Reports", icon: icons.reports },
+      { href: "/logs", label: "Activity Log", icon: icons.logs },
       { href: "/broadcast", label: "Broadcast", icon: icons.broadcast },
     ],
   },

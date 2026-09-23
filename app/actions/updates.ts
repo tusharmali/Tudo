@@ -10,6 +10,7 @@ import { setWip } from "@/lib/wip";
 import { listUsers } from "@/lib/users";
 import { generateOverall } from "@/lib/ai";
 import { actionError, type Res } from "@/lib/action";
+import { logAction } from "@/lib/audit";
 import type { WipSections } from "@/lib/format";
 
 const STATUSES = ["pending", "in-progress", "done"];
@@ -59,6 +60,7 @@ export async function createTaskAction(input: { userId: string; content: string;
       parentId: input.parentId,
       createdBy: admin.sub,
     });
+    await logAction(admin, "Day plan", "Added task", input.content.trim().slice(0, 80));
     revalidatePath("/updates");
     return { ok: true, message: "Task added" };
   } catch (e) {
@@ -68,8 +70,9 @@ export async function createTaskAction(input: { userId: string; content: string;
 
 export async function deleteTaskAction(input: { id: string }): Promise<Res> {
   try {
-    await requireManager();
+    const admin = await requireManager();
     await removeTask(input.id);
+    await logAction(admin, "Day plan", "Removed a task", "");
     revalidatePath("/updates");
     return { ok: true, message: "Removed" };
   } catch (e) {
@@ -169,6 +172,7 @@ export async function copyPreviousDayPlanAction(input: { date: string }): Promis
       createdAt: now,
     }));
     await appendRows("Tasks", rows);
+    await logAction(admin, "Day plan", "Copied previous day plan", `${rows.length} tasks → ${target}`);
     revalidatePath("/updates");
     return { ok: true, message: `Copied ${rows.length} tasks from ${src.slice(5).replace("-", "/")}` };
   } catch (e) {

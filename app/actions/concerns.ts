@@ -6,6 +6,7 @@ import { getUserById } from "@/lib/users";
 import { isManager } from "@/lib/roles";
 import { createConcern, addReply, setStatus, listRelated } from "@/lib/concerns";
 import { actionError, type Res } from "@/lib/action";
+import { logAction } from "@/lib/audit";
 
 export async function createConcernAction(input: { toUserId: string; subject: string; message: string }): Promise<Res> {
   try {
@@ -15,6 +16,7 @@ export async function createConcernAction(input: { toUserId: string; subject: st
     const to = await getUserById(input.toUserId);
     if (!to || !isManager(to.role)) return { ok: false, error: "You can only send concerns to an admin, director or HR." };
     await createConcern(u.sub, input.toUserId, input.subject.trim(), input.message.trim());
+    await logAction(u, "Concerns", "Raised a concern", `to ${to.name}: ${input.subject.trim().slice(0,60)}`);
     revalidatePath("/concerns");
     return { ok: true, message: "Concern sent privately" };
   } catch (e) {

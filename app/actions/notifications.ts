@@ -6,6 +6,7 @@ import { create, markRead, remove, clearAll } from "@/lib/notifications";
 import { saveSubscription, sendToAll, sendToUsers } from "@/lib/push";
 import { listUsers } from "@/lib/users";
 import { actionError, type Res } from "@/lib/action";
+import { logAction } from "@/lib/audit";
 
 export async function pushBroadcastAction(input: { title: string; body: string; target?: string }): Promise<Res> {
   try {
@@ -29,6 +30,7 @@ export async function pushBroadcastAction(input: { title: string; body: string; 
     if (dept) await sendToUsers(recipientIds, payload).catch(() => {});
     else await sendToAll(payload).catch(() => {});
 
+    await logAction(admin, "Broadcast", "Sent broadcast", `${dept ? dept : "Everyone"}: ${(title || body).slice(0, 80)}`);
     revalidatePath("/broadcast");
     return { ok: true, message: dept ? `Broadcast sent to ${dept} 📣` : "Broadcast sent to everyone 📣" };
   } catch (e) {
@@ -48,10 +50,11 @@ export async function markNotificationsReadAction(): Promise<Res> {
 
 export async function deleteNotificationAction(input: { id: string }): Promise<Res> {
   try {
-    await requireManager();
+    const me = await requireManager();
     if (!input.id) return { ok: false, error: "Missing notification id." };
     const n = await remove(input.id);
     if (!n) return { ok: false, error: "Notification not found." };
+    await logAction(me, "Broadcast", "Deleted a notification", "");
     revalidatePath("/broadcast");
     return { ok: true, message: "Notification deleted" };
   } catch (e) {
@@ -61,8 +64,9 @@ export async function deleteNotificationAction(input: { id: string }): Promise<R
 
 export async function clearAllNotificationsAction(): Promise<Res> {
   try {
-    await requireManager();
+    const me = await requireManager();
     const n = await clearAll();
+    await logAction(me, "Broadcast", "Cleared all notifications", `${n} removed`);
     revalidatePath("/broadcast");
     return { ok: true, message: n ? `Cleared ${n} notification${n === 1 ? "" : "s"}` : "Nothing to clear" };
   } catch (e) {

@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { giveKudosAction } from "@/app/actions/kudos";
+import { giveKudosAction, deleteKudoAction } from "@/app/actions/kudos";
 import { toast } from "@/components/Toaster";
 
 type Cat = { key: string; label: string; emoji: string };
-type FeedItem = { id: string; fromName: string; toName: string; emoji: string; label: string; message: string; when: string };
+type FeedItem = { id: string; fromUserId: string; fromName: string; toName: string; emoji: string; label: string; message: string; when: string };
 type Leader = { name: string; color: string; count: number };
 
 function initials(n: string): string {
@@ -14,11 +14,15 @@ function initials(n: string): string {
 }
 
 export default function KudosClient({
+  me,
+  canModerate,
   recipients,
   feed,
   leaderboard,
   categories,
 }: {
+  me: string;
+  canModerate: boolean;
   recipients: { id: string; name: string }[];
   feed: FeedItem[];
   leaderboard: Leader[];
@@ -29,6 +33,18 @@ export default function KudosClient({
   const [cat, setCat] = useState(categories[0]?.key || "");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  async function removeKudo(id: string) {
+    if (!confirm("Remove this kudo?")) return;
+    setRemoving(id);
+    const r = await deleteKudoAction({ id });
+    if (r.ok) {
+      toast(r.message || "Removed");
+      router.refresh();
+    } else toast(r.error || "Error");
+    setRemoving(null);
+  }
 
   async function send() {
     if (!to) {
@@ -122,6 +138,19 @@ export default function KudosClient({
                     {k.when}
                   </div>
                 </div>
+                {(canModerate || k.fromUserId === me) && (
+                  <button
+                    className="icon-btn"
+                    style={{ width: 28, height: 28, flex: "none" }}
+                    title={k.fromUserId === me ? "Remove (you gave this)" : "Remove kudo"}
+                    onClick={() => removeKudo(k.id)}
+                    disabled={removing === k.id}
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-7 0v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7" />
+                    </svg>
+                  </button>
+                )}
               </div>
             ))}
           </div>

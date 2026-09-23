@@ -22,7 +22,8 @@ export type SheetName =
   | "Settings"
   | "Kudos"
   | "Shoots"
-  | "Milestones";
+  | "Milestones"
+  | "AuditLog";
 
 export const SCHEMA: Record<SheetName, string[]> = {
   Users: ["id", "name", "handle", "email", "passwordHash", "role", "department", "avatarColor", "phone", "status", "createdAt"],
@@ -44,6 +45,7 @@ export const SCHEMA: Record<SheetName, string[]> = {
   Kudos: ["id", "fromUserId", "toUserId", "category", "message", "createdAt"],
   Shoots: ["id", "client", "title", "date", "status", "assigneeId", "notes", "createdBy", "createdAt"],
   Milestones: ["id", "userId", "title", "targetDate", "status", "notes", "createdBy", "createdAt"],
+  AuditLog: ["id", "actorId", "actorName", "category", "action", "detail", "createdAt"],
 };
 
 /** Seeded into the Settings tab on init (only if the key is missing). */
