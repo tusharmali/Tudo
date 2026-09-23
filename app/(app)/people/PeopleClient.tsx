@@ -29,12 +29,14 @@ export default function PeopleClient({
   departments,
   twofa,
   emailReady,
+  ownerId,
 }: {
   me: { id: string; role: Role };
   users: Person[];
   departments: string[];
   twofa: boolean;
   emailReady: boolean;
+  ownerId: string;
 }) {
   const router = useRouter();
   const iamSuper = me.role === "superadmin";
@@ -157,15 +159,24 @@ export default function PeopleClient({
             <tbody>
               {filtered.map((u) => {
                 const isSelf = u.id === me.id;
-                const canSuspend = !isSelf && (iamSuper || u.role !== "superadmin");
+                const isOwner = u.id === ownerId;
+                const locked = isOwner && !isSelf; // only the owner can edit the owner
+                const canSuspend = !isSelf && !locked && (iamSuper || u.role !== "superadmin");
                 return (
                   <tr key={u.id} style={{ opacity: u.status === "suspended" ? 0.6 : 1 }}>
                     <td>
                       <div className="row" style={{ gap: 10, minWidth: 0 }}>
                         <div className="avatar sm" style={{ background: u.color }}>{initials(u.name)}</div>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600 }}>{u.name}{isSelf ? " (you)" : ""}</div>
-                          {editEmail === u.id ? (
+                          <div style={{ fontWeight: 600 }}>
+                            {u.name}{isSelf ? " (you)" : ""}
+                            {isOwner && <span className="pill p-peri" style={{ marginLeft: 6, fontSize: 10, padding: "1px 7px" }}>Owner</span>}
+                          </div>
+                          {locked ? (
+                            <div className="tiny faint" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }} title="Only the owner can change this account">
+                              {u.email} 🔒
+                            </div>
+                          ) : editEmail === u.id ? (
                             <div className="row" style={{ gap: 4, marginTop: 2 }}>
                               <input
                                 className="inp"
@@ -192,7 +203,7 @@ export default function PeopleClient({
                       </div>
                     </td>
                     <td>
-                      {iamSuper && !isSelf ? (
+                      {iamSuper && !isSelf && !locked ? (
                         <select className="inp" style={{ padding: "5px 8px", fontSize: 12.5, width: 130 }} value={u.role} disabled={busy === `role:${u.id}`} onChange={(e) => changeRole(u, e.target.value as Role)}>
                           <option value="employee">Employee</option>
                           <option value="hr">HR Manager</option>
@@ -203,7 +214,7 @@ export default function PeopleClient({
                       )}
                     </td>
                     <td>
-                      <select className="inp" style={{ padding: "5px 8px", fontSize: 12.5, width: 130 }} value={u.department || ""} disabled={busy === `dep:${u.id}`} onChange={(e) => changeDept(u, e.target.value)}>
+                      <select className="inp" style={{ padding: "5px 8px", fontSize: 12.5, width: 130 }} value={u.department || ""} disabled={busy === `dep:${u.id}` || locked} onChange={(e) => changeDept(u, e.target.value)}>
                         <option value="">— none —</option>
                         {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
                       </select>
@@ -213,7 +224,10 @@ export default function PeopleClient({
                     </td>
                     <td>
                       <div className="row" style={{ gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                        <button className="btn btn-ghost" style={{ padding: "6px 10px", fontSize: 12 }} onClick={() => resetPw(u)} disabled={busy === `pw:${u.id}`}>Reset password</button>
+                        {locked && <span className="tiny faint" title="Only the owner can change this account">🔒 Protected</span>}
+                        {!locked && (
+                          <button className="btn btn-ghost" style={{ padding: "6px 10px", fontSize: 12 }} onClick={() => resetPw(u)} disabled={busy === `pw:${u.id}`}>Reset password</button>
+                        )}
                         {canSuspend && (
                           <button className={`btn ${u.status === "suspended" ? "btn-primary" : "btn-ghost"}`} style={{ padding: "6px 10px", fontSize: 12 }} onClick={() => toggleSuspend(u)} disabled={busy === `sus:${u.id}`}>
                             {u.status === "suspended" ? "Reactivate" : "Suspend"}

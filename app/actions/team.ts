@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireManager, requireAdmin } from "@/lib/dal";
 import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail } from "@/lib/users";
 import { setTwofaEnabled } from "@/lib/twofa";
+import { assertCanModify } from "@/lib/owner";
 import { actionError, type Res } from "@/lib/action";
 import type { Role } from "@/lib/types";
 
@@ -46,6 +47,7 @@ export async function setUserSuspendedAction(input: { userId: string; suspended:
   try {
     const me = await requireManager();
     if (input.userId === me.sub) return { ok: false, error: "You can't suspend your own account." };
+    await assertCanModify(input.userId, me.sub);
     const target = await getUserById(input.userId);
     if (!target) return { ok: false, error: "User not found." };
     // Only a super-admin may suspend another super-admin (protects the owners).
@@ -62,7 +64,8 @@ export async function setUserSuspendedAction(input: { userId: string; suspended:
 
 export async function setUserDepartmentAction(input: { userId: string; department: string }): Promise<Res> {
   try {
-    await requireManager();
+    const me = await requireManager();
+    await assertCanModify(input.userId, me.sub);
     await setUserDepartment(input.userId, input.department);
     revalidatePath("/people");
     return { ok: true, message: "Department updated" };
@@ -73,7 +76,8 @@ export async function setUserDepartmentAction(input: { userId: string; departmen
 
 export async function setUserEmailAction(input: { userId: string; email: string }): Promise<Res> {
   try {
-    await requireManager();
+    const me = await requireManager();
+    await assertCanModify(input.userId, me.sub);
     await setUserEmail(input.userId, input.email);
     revalidatePath("/people");
     return { ok: true, message: "Email updated" };
@@ -98,6 +102,7 @@ export async function setUserRoleAction(input: { userId: string; role: Role }): 
     const me = await requireAdmin(); // role changes are super-admin only
     if (!ROLES.includes(input.role)) return { ok: false, error: "Unknown role." };
     if (input.userId === me.sub) return { ok: false, error: "You can't change your own role." };
+    await assertCanModify(input.userId, me.sub);
     await setUserRole(input.userId, input.role);
     revalidatePath("/people");
     return { ok: true, message: "Role updated" };
