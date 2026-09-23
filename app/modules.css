@@ -49,6 +49,8 @@ select.inp { cursor: pointer; }
 .copybox .cbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
 .copybox .cttl { font-size: 12px; font-weight: 650; color: var(--ink-soft); display: flex; align-items: center; gap: 7px; }
 .copybox pre { margin: 0; padding: 16px 18px; font-family: var(--mono); font-size: 12.2px; line-height: 1.55; color: var(--ink); overflow-x: auto; max-height: 460px; white-space: pre; }
+.copybox textarea.wip-edit { display: block; width: 100%; margin: 0; padding: 16px 18px; border: none; background: transparent; resize: vertical; font-family: var(--mono); font-size: 12.2px; line-height: 1.55; color: var(--ink); min-height: 340px; max-height: 560px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.copybox textarea.wip-edit:focus { outline: none; }
 .copy-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; padding: 6px 12px; border-radius: 8px; background: var(--accent); color: #fff; transition: .2s; }
 .copy-btn:hover { background: var(--accent-ink); }
 .copy-btn.done { background: var(--good); }

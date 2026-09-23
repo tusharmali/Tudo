@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { saveWipAction } from "@/app/actions/updates";
 import { renderWip, EMPTY_WIP, type WipSections } from "@/lib/format";
 import { toast } from "@/components/Toaster";
-import CopyButton from "@/components/CopyButton";
+import WipEditablePreview from "./WipEditablePreview";
 
 const FIELDS: { key: keyof WipSections; label: string; ph: string }[] = [
   { key: "worked", label: "Tasks worked on (with brief output)", ph: "- Task — brief output" },
@@ -66,13 +66,7 @@ export default function WipComposer({ saved, auto, date }: { saved: WipSections 
           {busy ? "Saving…" : "Save WIP"}
         </button>
       </div>
-      <div className="copybox" style={{ alignSelf: "start" }}>
-        <div className="cbar">
-          <span className="cttl">WIP — ready to post</span>
-          <CopyButton text={preview} />
-        </div>
-        <pre>{preview}</pre>
-      </div>
+      <WipEditablePreview text={preview} resetKey={date} />
     </div>
   );
 }

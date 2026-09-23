@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { saveWipAction } from "@/app/actions/updates";
 import { renderDigiWip, parseDigiWip, EMPTY_DIGI, DIGI_STATUSES, type DigiWip, type DigiTask } from "@/lib/format";
 import { toast } from "@/components/Toaster";
-import CopyButton from "@/components/CopyButton";
+import WipEditablePreview from "./WipEditablePreview";
 
 const blankTask = (): DigiTask => ({ name: "", time: "", notes: "", status: "Completed" });
 
@@ -91,13 +91,7 @@ export default function DigiWipComposer({ raw, date }: { raw: string; date: stri
         </div>
       </div>
 
-      <div className="copybox" style={{ alignSelf: "start" }}>
-        <div className="cbar">
-          <span className="cttl">WIP — ready to post</span>
-          <CopyButton text={preview} />
-        </div>
-        <pre>{preview}</pre>
-      </div>
+      <WipEditablePreview text={preview} resetKey={date} />
     </div>
   );
 }

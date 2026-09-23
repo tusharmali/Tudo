@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { saveWipAction } from "@/app/actions/updates";
 import { renderSupportWip, parseSupportWip, EMPTY_SUPPORT, type SupportWip } from "@/lib/format";
 import { toast } from "@/components/Toaster";
-import CopyButton from "@/components/CopyButton";
+import WipEditablePreview from "./WipEditablePreview";
 
 export default function SupportWipComposer({ raw, date }: { raw: string; date: string }) {
   const [w, setW] = useState<SupportWip>(parseSupportWip(raw) || EMPTY_SUPPORT);
@@ -89,13 +89,7 @@ export default function SupportWipComposer({ raw, date }: { raw: string; date: s
         </button>
       </div>
 
-      <div className="copybox" style={{ alignSelf: "start" }}>
-        <div className="cbar">
-          <span className="cttl">WIP — ready to post</span>
-          <CopyButton text={preview} />
-        </div>
-        <pre>{preview}</pre>
-      </div>
+      <WipEditablePreview text={preview} resetKey={date} />
     </div>
   );
 }
