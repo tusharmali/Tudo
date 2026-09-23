@@ -37,6 +37,7 @@ const icons = {
   milestones: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M5 21V4m0 0 8 2-1.5 3L14 12l-9-2" />),
   logs: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M9 5h9M9 12h9M9 19h9M4.5 5h.01M4.5 12h.01M4.5 19h.01" />),
   refresh: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 0 0 6 5.3L4 8M4 15a8 8 0 0 0 14 3.7l2-2.7" />),
+  myspace: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1ZM9 9h6M9 12h4" />),
 };
 
 type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[]; ownerOnly?: boolean };
@@ -49,6 +50,7 @@ const NAV: NavSection[] = [
     items: [
       { href: "/updates", label: "Updates & Plan", icon: icons.updates },
       { href: "/attendance", label: "Attendance", icon: icons.attendance },
+      { href: "/my", label: "My Space", icon: icons.myspace },
     ],
   },
   {

@@ -154,6 +154,9 @@ select.inp { cursor: pointer; }
 .mpick-x { width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); color: var(--bad); cursor: pointer; flex: none; font-size: 12px; }
 .mpick-x:hover { background: var(--bad); color: #fff; }
 .react-pop, .emoji-pop { max-width: calc(100vw - 20px); }
+/* personal reminders checkbox */
+.chk { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface-2); cursor: pointer; flex: none; display: grid; place-items: center; font-size: 13px; color: #fff; }
+.chk.on { background: var(--good); border-color: var(--good); }
 .reacts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 1px; }
 .react-chip { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); cursor: pointer; }
 .react-chip.mine { background: var(--accent-wash); border-color: var(--accent); color: var(--accent-ink); }
