@@ -4,7 +4,7 @@
  * (never a public URL). Only a short object key lives in the DB, keeping the
  * Users rows light. Node runtime only.
  */
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 const BUCKET = process.env.AWS_S3_BUCKET || "icarus";
 
@@ -68,5 +68,16 @@ export async function deleteObject(key: string): Promise<void> {
     await s3().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
   } catch {
     /* best-effort cleanup — a leftover object must not break the action */
+  }
+}
+
+/** Size of a stored object in bytes (0 if missing / unreadable). */
+export async function objectSize(key: string): Promise<number> {
+  if (!key || !storageReady()) return 0;
+  try {
+    const r = await s3().send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
+    return r.ContentLength || 0;
+  } catch {
+    return 0;
   }
 }

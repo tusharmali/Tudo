@@ -113,6 +113,9 @@ export default function NotificationBell() {
               </button>
             ))}
           </div>
+          <button className="bell-all" type="button" onClick={() => { setOpen(false); router.push("/notifications"); }}>
+            See all notifications →
+          </button>
         </div>
       )}
     </div>

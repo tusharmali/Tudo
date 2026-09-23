@@ -159,6 +159,8 @@ select.inp { cursor: pointer; }
 .bell-item.unread { background: var(--accent-wash); }
 .bell-item-btn { display: block; width: 100%; text-align: left; background: none; font: inherit; color: inherit; cursor: pointer; transition: background .12s ease; }
 .bell-item-btn:hover { background: var(--accent-wash); }
+.bell-all { flex: none; width: 100%; padding: 11px; text-align: center; font-size: 12.5px; font-weight: 650; color: var(--accent-ink); background: var(--surface-2); border-top: 1px solid var(--line); cursor: pointer; }
+.bell-all:hover { background: var(--accent-wash); }
 
 /* fun contributions */
 .contrib { padding: 14px 16px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); margin-bottom: 10px; }

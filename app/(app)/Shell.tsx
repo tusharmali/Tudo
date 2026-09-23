@@ -39,7 +39,7 @@ const icons = {
   refresh: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 0 0 6 5.3L4 8M4 15a8 8 0 0 0 14 3.7l2-2.7" />),
 };
 
-type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[] };
+type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[]; ownerOnly?: boolean };
 type NavSection = { section: string | null; adminOnly?: boolean; items: NavItem[] };
 
 const NAV: NavSection[] = [
@@ -71,6 +71,7 @@ const NAV: NavSection[] = [
       { href: "/reports", label: "Reports", icon: icons.reports },
       { href: "/logs", label: "Activity Log", icon: icons.logs },
       { href: "/broadcast", label: "Broadcast", icon: icons.broadcast },
+      { href: "/data", label: "Storage", icon: icons.reports, ownerOnly: true },
     ],
   },
 ];
@@ -88,7 +89,7 @@ function greetWord(): string {
   return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
-export default function Shell({ user, children }: { user: SessionUser; children: ReactNode }) {
+export default function Shell({ user, isOwner = false, children }: { user: SessionUser; isOwner?: boolean; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -142,7 +143,8 @@ export default function Shell({ user, children }: { user: SessionUser; children:
   const first = user.name.split(" ")[0] || user.name;
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
   // Managers see everything; employees see shared items + their department's items.
-  const canSeeItem = (item: NavItem) => isManager(user.role) || !item.depts || item.depts.includes(user.dept);
+  const canSeeItem = (item: NavItem) =>
+    (!item.ownerOnly || isOwner) && (isManager(user.role) || !item.depts || item.depts.includes(user.dept));
   const sections = NAV
     .filter((s) => !s.adminOnly || isManager(user.role))
     .map((s) => ({ ...s, items: s.items.filter(canSeeItem) }))
