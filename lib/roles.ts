@@ -9,9 +9,9 @@
  */
 import type { Role } from "./types";
 
-/** superadmin OR hr — the "management" tier that runs people-ops surfaces. */
+/** superadmin, director OR hr — the "management" tier with full module access. */
 export function isManager(role?: Role | string): boolean {
-  return role === "superadmin" || role === "hr";
+  return role === "superadmin" || role === "director" || role === "hr";
 }
 
 export function isSuperadmin(role?: Role | string): boolean {
@@ -19,5 +19,11 @@ export function isSuperadmin(role?: Role | string): boolean {
 }
 
 export function roleLabel(role?: Role | string): string {
-  return role === "superadmin" ? "Super Admin" : role === "hr" ? "HR Manager" : "Employee";
+  return role === "superadmin"
+    ? "Super Admin"
+    : role === "director"
+      ? "Director"
+      : role === "hr"
+        ? "HR Manager"
+        : "Employee";
 }

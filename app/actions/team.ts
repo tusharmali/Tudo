@@ -8,7 +8,7 @@ import { assertCanModify } from "@/lib/owner";
 import { actionError, type Res } from "@/lib/action";
 import type { Role } from "@/lib/types";
 
-const ROLES: Role[] = ["employee", "hr", "superadmin"];
+const ROLES: Role[] = ["employee", "hr", "director", "superadmin"];
 
 export async function addTeammateAction(input: {
   name: string;
@@ -26,8 +26,8 @@ export async function addTeammateAction(input: {
       return { ok: false, error: "Password must be at least 6 characters." };
     }
     let role: Role = ROLES.includes(input.role) ? input.role : "employee";
-    // Only a super-admin can mint another manager/admin.
-    if ((role === "superadmin" || role === "hr") && me.role !== "superadmin") role = "employee";
+    // Only a super-admin can mint a privileged role (admin / director / hr).
+    if (role !== "employee" && me.role !== "superadmin") role = "employee";
     const user = await createUser({
       name: input.name,
       email: input.email,

@@ -21,7 +21,7 @@ const BASE_DEPTS = ["Leadership", "Tech", "Digi", "Support", "HR"];
 function initials(n: string) {
   return n.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 }
-const roleClass: Record<string, string> = { superadmin: "p-peri", hr: "p-sky", employee: "p-neut" };
+const roleClass: Record<string, string> = { superadmin: "p-peri", director: "p-good", hr: "p-sky", employee: "p-neut" };
 
 export default function PeopleClient({
   me,
@@ -143,6 +143,7 @@ export default function PeopleClient({
           <select className="inp" style={{ maxWidth: 200 }} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
             <option value="employee">Employee</option>
             {iamSuper && <option value="hr">HR Manager</option>}
+            {iamSuper && <option value="director">Director</option>}
             {iamSuper && <option value="superadmin">Super Admin</option>}
           </select>
           <button className="btn btn-primary" onClick={add} disabled={busy === "add"}>{busy === "add" ? "Adding…" : "Add teammate"}</button>
@@ -208,6 +209,7 @@ export default function PeopleClient({
                         <select className="inp" style={{ padding: "5px 8px", fontSize: 12.5, width: 130 }} value={u.role} disabled={busy === `role:${u.id}`} onChange={(e) => changeRole(u, e.target.value as Role)}>
                           <option value="employee">Employee</option>
                           <option value="hr">HR Manager</option>
+                          <option value="director">Director</option>
                           <option value="superadmin">Super Admin</option>
                         </select>
                       ) : (
