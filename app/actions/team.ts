@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireManager, requireAdmin } from "@/lib/dal";
 import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment } from "@/lib/users";
+import { setTwofaEnabled } from "@/lib/twofa";
 import { actionError, type Res } from "@/lib/action";
 import type { Role } from "@/lib/types";
 
@@ -65,6 +66,17 @@ export async function setUserDepartmentAction(input: { userId: string; departmen
     await setUserDepartment(input.userId, input.department);
     revalidatePath("/people");
     return { ok: true, message: "Department updated" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setTwofaEnabledAction(input: { enabled: boolean }): Promise<Res> {
+  try {
+    await requireAdmin(); // security policy — super-admin only
+    await setTwofaEnabled(input.enabled);
+    revalidatePath("/people");
+    return { ok: true, message: input.enabled ? "Email 2FA is now required on new logins" : "Email 2FA turned off" };
   } catch (e) {
     return actionError(e);
   }

@@ -7,6 +7,7 @@ import {
   setUserSuspendedAction,
   setUserDepartmentAction,
   setUserRoleAction,
+  setTwofaEnabledAction,
 } from "@/app/actions/team";
 import { resetPasswordAction } from "@/app/actions/account";
 import { roleLabel } from "@/lib/roles";
@@ -25,10 +26,14 @@ export default function PeopleClient({
   me,
   users,
   departments,
+  twofa,
+  emailReady,
 }: {
   me: { id: string; role: Role };
   users: Person[];
   departments: string[];
+  twofa: boolean;
+  emailReady: boolean;
 }) {
   const router = useRouter();
   const iamSuper = me.role === "superadmin";
@@ -74,6 +79,11 @@ export default function PeopleClient({
     if (next.length < 6) return toast("Password must be at least 6 characters");
     run(`pw:${u.id}`, () => resetPasswordAction({ userId: u.id, next }));
   }
+  function toggle2fa() {
+    if (!twofa && !emailReady) return toast("Set up Resend (RESEND_API_KEY) before turning on 2FA");
+    if (!twofa && !confirm("Require an emailed code on new logins? Make sure every member has a real, reachable email first.")) return;
+    run("2fa", () => setTwofaEnabledAction({ enabled: !twofa }));
+  }
 
   return (
     <>
@@ -83,6 +93,23 @@ export default function PeopleClient({
         <div className="stat tint-mint"><div className="k">Active</div><div className="v num">{users.length - suspendedCount}</div><div className="d muted">can sign in</div></div>
         <div className="stat tint-blush"><div className="k">Suspended</div><div className="v num">{suspendedCount}</div><div className="d muted">login blocked</div></div>
       </div>
+
+      {iamSuper && (
+        <div className="card pad" style={{ marginBottom: 18 }}>
+          <div className="between" style={{ gap: 12, flexWrap: "wrap" }}>
+            <div style={{ minWidth: 0 }}>
+              <h3 className="sec" style={{ marginBottom: 4 }}>Email 2FA {twofa ? <span className="pill p-good" style={{ marginLeft: 6 }}>On</span> : <span className="pill p-neut" style={{ marginLeft: 6 }}>Off</span>}</h3>
+              <p className="muted tiny" style={{ margin: 0 }}>
+                When on, new logins need a code emailed to the member. Remembered devices skip it for 30 days.
+                {!emailReady && " (Resend not configured yet.)"}
+              </p>
+            </div>
+            <button className={`btn ${twofa ? "btn-ghost" : "btn-primary"}`} onClick={toggle2fa} disabled={busy === "2fa"} style={{ whiteSpace: "nowrap" }}>
+              {busy === "2fa" ? "…" : twofa ? "Turn off" : "Turn on"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card pad" style={{ marginBottom: 18 }}>
         <h3 className="sec" style={{ marginBottom: 12 }}>Add a teammate</h3>
