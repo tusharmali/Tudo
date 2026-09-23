@@ -1,11 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser, requireManager } from "@/lib/dal";
+import { requireManager } from "@/lib/dal";
 import { addExpense, decideExpense, getExpense, removeExpense, type ExpenseStatus } from "@/lib/expenses";
 import { putBytes, deleteObject, storageReady } from "@/lib/storage";
 import { getUserById } from "@/lib/users";
-import { isManager } from "@/lib/roles";
 import { notifyUser } from "@/lib/notifications";
 import { logAction } from "@/lib/audit";
 import { genId } from "@/lib/db";
@@ -15,7 +14,7 @@ const RECEIPT_MAX = 3_000_000; // ~3 MB decoded
 
 export async function submitExpenseAction(input: { amount: string; category: string; note: string; date: string; receipt?: string }): Promise<Res> {
   try {
-    const u = await requireUser();
+    const u = await requireManager(); // internal — managers only
     const amount = Number(input.amount);
     if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: "Enter a valid amount." };
 
@@ -59,13 +58,9 @@ export async function decideExpenseAction(input: { id: string; status: ExpenseSt
 
 export async function deleteExpenseAction(input: { id: string }): Promise<Res> {
   try {
-    const u = await requireUser();
+    const u = await requireManager();
     const exp = await getExpense(input.id);
     if (!exp) return { ok: false, error: "Expense not found." };
-    // Owner may delete their own while pending; managers may delete any.
-    if (!(isManager(u.role) || (exp.userId === u.sub && exp.status === "pending"))) {
-      return { ok: false, error: "You can only remove your own pending expense." };
-    }
     await removeExpense(input.id);
     if (exp.receiptKey) await deleteObject(exp.receiptKey);
     await logAction(u, "Expenses", "Removed an expense", `₹${exp.amount}`);

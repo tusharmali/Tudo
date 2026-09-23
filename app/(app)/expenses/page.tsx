@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
-import { listAllExpenses, listExpensesForUser, EXPENSE_CATEGORIES } from "@/lib/expenses";
+import { listAllExpenses, EXPENSE_CATEGORIES } from "@/lib/expenses";
 import { usersMap } from "@/lib/users";
 import { todayStr } from "@/lib/db";
 import ExpensesClient from "./ExpensesClient";
@@ -12,8 +13,8 @@ export const metadata: Metadata = { title: "Expenses" };
 export default async function ExpensesPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const mgr = isManager(user.role);
-  const [rows, umap] = await Promise.all([mgr ? listAllExpenses() : listExpensesForUser(user.sub), usersMap()]);
+  if (!isManager(user.role)) redirect("/dashboard"); // managers only — internal
+  const [rows, umap] = await Promise.all([listAllExpenses(), usersMap()]);
   const expenses = rows.map((e) => ({
     id: e.id,
     userId: e.userId,
@@ -26,5 +27,5 @@ export default async function ExpensesPage() {
     hasReceipt: !!e.receiptKey,
     status: e.status,
   }));
-  return <ExpensesClient me={user.sub} isManager={mgr} expenses={expenses} categories={EXPENSE_CATEGORIES} today={todayStr()} />;
+  return <ExpensesClient me={user.sub} isManager expenses={expenses} categories={EXPENSE_CATEGORIES} today={todayStr()} />;
 }
