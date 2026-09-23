@@ -9,6 +9,16 @@ import { toast } from "@/components/Toaster";
 type Lite = { id: string; name: string; email: string };
 type Me = { id: string; name: string; color: string; avatar: string; role: string };
 
+/** Read a file straight to a data URL, no re-encoding (keeps GIF animation). */
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(new Error("Couldn't read that file."));
+    r.readAsDataURL(file);
+  });
+}
+
 /** Downscale a picked image to a small square-ish JPEG data URL, client-side. */
 function resizeImage(file: File, max = 200): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -57,7 +67,16 @@ function ProfileCard({ me }: { me: Me }) {
   async function pickPhoto(file: File) {
     setSavingPhoto(true);
     try {
-      const dataUrl = await resizeImage(file);
+      // GIFs are uploaded as-is so they keep animating; everything else is
+      // downscaled to a small JPEG. GIFs can't be resized in-canvas without
+      // flattening, so we cap the file size instead.
+      let dataUrl: string;
+      if (file.type === "image/gif") {
+        if (file.size > 2_000_000) throw new Error("GIF is too large — keep it under 2 MB.");
+        dataUrl = await fileToDataUrl(file);
+      } else {
+        dataUrl = await resizeImage(file);
+      }
       setPreview(dataUrl);
       const r = await updateMyAvatarAction({ dataUrl });
       if (r.ok) {
@@ -96,7 +115,7 @@ function ProfileCard({ me }: { me: Me }) {
           <input
             ref={fileRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept="image/png,image/jpeg,image/webp,image/gif"
             style={{ display: "none" }}
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -124,7 +143,7 @@ function ProfileCard({ me }: { me: Me }) {
           </button>
         </div>
         <p className="muted tiny" style={{ margin: "8px 0 0" }}>
-          {me.role} · this is how your name and photo show across Tudo.
+          {me.role} · shown across Tudo. Photo can be PNG, JPG, WebP or an animated GIF (≤ 2 MB).
         </p>
       </div>
     </div>

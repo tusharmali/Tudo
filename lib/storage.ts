@@ -32,7 +32,13 @@ export function storageReady(): boolean {
 
 /** Upload a display picture; returns the object key to store on the user. */
 export async function putAvatar(userId: string, body: Buffer, contentType: string): Promise<string> {
-  const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+  const ext = contentType.includes("png")
+    ? "png"
+    : contentType.includes("webp")
+      ? "webp"
+      : contentType.includes("gif")
+        ? "gif"
+        : "jpg";
   const key = `avatars/${userId}-${Date.now().toString(36)}.${ext}`;
   await s3().send(
     new PutObjectCommand({

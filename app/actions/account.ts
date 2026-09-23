@@ -41,14 +41,20 @@ export async function updateMyAvatarAction(input: { dataUrl: string }): Promise<
       return { ok: true, message: "Photo removed" };
     }
 
-    const m = /^data:(image\/(?:png|jpe?g|webp));base64,(.+)$/i.exec(v);
+    const m = /^data:(image\/(?:png|jpe?g|webp|gif));base64,(.+)$/i.exec(v);
     if (!m) return { ok: false, error: "That doesn't look like an image." };
     if (!storageReady()) return { ok: false, error: "Photo storage isn't set up yet." };
 
+    const contentType = m[1].toLowerCase();
+    const isGif = contentType === "image/gif";
     const buf = Buffer.from(m[2], "base64");
-    if (buf.length > IMG_MAX_BYTES) return { ok: false, error: "Image is too large — pick a smaller one." };
+    // GIFs arrive un-resized (to keep animation), so they get a bigger cap.
+    const cap = isGif ? 2_200_000 : IMG_MAX_BYTES;
+    if (buf.length > cap) {
+      return { ok: false, error: isGif ? "GIF is too large — keep it under 2 MB." : "Image is too large — pick a smaller one." };
+    }
 
-    const key = await putAvatar(u.sub, buf, m[1].toLowerCase());
+    const key = await putAvatar(u.sub, buf, contentType);
     await setAvatar(u.sub, key);
     if (oldKey && oldKey !== key) await deleteObject(oldKey);
     await logAction(u, "Account", "Updated their photo", "");
