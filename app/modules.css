@@ -157,6 +157,25 @@ select.inp { cursor: pointer; }
 /* personal reminders checkbox */
 .chk { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface-2); cursor: pointer; flex: none; display: grid; place-items: center; font-size: 13px; color: #fff; }
 .chk.on { background: var(--good); border-color: var(--good); }
+/* sidebar: collapse toggle + pin favorites */
+.side-brand { position: relative; }
+.side-collapse { margin-left: auto; width: 26px; height: 26px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-soft); cursor: pointer; font-size: 13px; flex: none; line-height: 1; }
+.side-collapse:hover { background: var(--surface-3); color: var(--ink); }
+.nav-row { position: relative; }
+.nav-star { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 6px; background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 12px; opacity: 0; transition: opacity .15s, background .15s; z-index: 1; }
+.nav-row:hover .nav-star { opacity: .75; }
+.nav-star.on { opacity: 1; color: var(--warn); }
+.nav-star:hover { background: var(--surface-3); opacity: 1; }
+.app.collapsed { grid-template-columns: 74px 1fr; }
+.app.collapsed .sidebar { padding: 20px 8px; }
+.app.collapsed .brand-mark, .app.collapsed .brand-name, .app.collapsed .nav-item span, .app.collapsed .nav-label, .app.collapsed .nav-star, .app.collapsed .nav-badge, .app.collapsed .side-user .meta { display: none; }
+.app.collapsed .side-brand { justify-content: center; padding: 6px 0 14px; }
+.app.collapsed .side-collapse { margin: 0; }
+.app.collapsed .nav-item { justify-content: center; gap: 0; padding: 11px 0; }
+.app.collapsed .nav-item:hover { transform: none; }
+.app.collapsed .nav-item.active::before { left: -8px; }
+.app.collapsed .side-user { justify-content: center; }
+.app.collapsed .side-user form { display: none; }
 /* dashboard quick-access tiles */
 .qa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
 .qa-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); color: var(--ink); text-decoration: none; transition: .15s; text-align: center; }
@@ -183,8 +202,8 @@ select.inp { cursor: pointer; }
 .cal-dot.wfh { background: var(--sky, #5CA0DE); }
 .cal-dot.off { background: var(--ink-faint); }
 .cal-dot.work { background: var(--accent); }
-.cal-cell.off { background: var(--surface-2); }
-.cal-cell.holiday { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--bad); }
+.cal-cell.off { background: color-mix(in srgb, var(--ink) 8%, var(--surface)); }
+.cal-cell.holiday { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); box-shadow: inset 3px 0 0 var(--bad); }
 .cal-cell.working { background: var(--accent-wash); box-shadow: inset 3px 0 0 var(--accent); }
 .cal-cell.today.working, .cal-cell.today.off { box-shadow: inset 3px 0 0 var(--accent); }
 .cal-tag { font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 5px; white-space: nowrap; }

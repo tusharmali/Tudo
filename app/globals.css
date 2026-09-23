@@ -228,7 +228,7 @@ h3.sec { font-family: var(--round); font-size: 16px; font-weight: 750; letter-sp
 
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
-  .app { grid-template-columns: 1fr; }
+  .app, .app.collapsed { grid-template-columns: 1fr; }
   .sidebar { display: none; }
   .g-4 { grid-template-columns: repeat(2, 1fr); }
   .g-3, .g-2, .g-2-1 { grid-template-columns: 1fr; }

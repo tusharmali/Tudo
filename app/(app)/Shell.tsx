@@ -105,6 +105,9 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   const [dateStr, setDateStr] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [favs, setFavs] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
   // Keep every screen live: soft-refresh server data every 30s (paused when the
@@ -128,7 +131,17 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
     setTheme(t);
     setGreeting(greetWord());
     setDateStr(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }));
+    setMounted(true);
+    try { setCollapsed(localStorage.getItem("tudo-collapsed") === "1"); } catch { /* ignore */ }
+    try { const f = JSON.parse(localStorage.getItem("tudo-favs") || "[]"); if (Array.isArray(f)) setFavs(f); } catch { /* ignore */ }
   }, []);
+
+  function toggleCollapse() {
+    setCollapsed((c) => { const n = !c; try { localStorage.setItem("tudo-collapsed", n ? "1" : "0"); } catch { /* ignore */ } return n; });
+  }
+  function toggleFav(href: string) {
+    setFavs((prev) => { const n = prev.includes(href) ? prev.filter((x) => x !== href) : [...prev, href]; try { localStorage.setItem("tudo-favs", JSON.stringify(n)); } catch { /* ignore */ } return n; });
+  }
 
   // The main panel is the scroll container — reset it to the top on navigation,
   // and always close the mobile "More" sheet when the route changes.
@@ -163,26 +176,44 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
       ? `${roleLabel(user.role)} · ${user.dept}`
       : user.dept || "Employee";
   const meSrc = avatarSrc({ id: user.sub, avatar: user.avatar });
+  const allItems = sections.flatMap((s) => s.items);
+  const favItems = allItems.filter((i) => favs.includes(i.href));
+
+  const renderItem = (item: NavItem) => (
+    <div className="nav-row" key={item.href}>
+      <Link href={item.href} className={`nav-item${isActive(item.href) ? " active" : ""}`} title={item.label}>
+        {item.icon}
+        <span>{item.label}</span>
+        {item.badge && <span className="nav-badge">{item.badge}</span>}
+      </Link>
+      <button type="button" className={`nav-star${favs.includes(item.href) ? " on" : ""}`} title={favs.includes(item.href) ? "Unpin from favorites" : "Pin to favorites"} onClick={() => toggleFav(item.href)}>
+        {favs.includes(item.href) ? "★" : "☆"}
+      </button>
+    </div>
+  );
 
   return (
-    <div className="app">
+    <div className={`app${collapsed ? " collapsed" : ""}`}>
       <aside className="sidebar">
         <div className="side-brand">
           <div className="brand-mark">T</div>
           <div className="brand-name">Tudo</div>
+          <button type="button" className="side-collapse" onClick={toggleCollapse} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+            {collapsed ? "»" : "«"}
+          </button>
         </div>
 
         <div className="side-nav">
+          {mounted && favItems.length > 0 && (
+            <div>
+              <div className="nav-label">Favorites</div>
+              {favItems.map(renderItem)}
+            </div>
+          )}
           {sections.map((sec, i) => (
             <div key={i}>
               {sec.section && <div className="nav-label">{sec.section}</div>}
-              {sec.items.map((item) => (
-                <Link key={item.href} href={item.href} className={`nav-item${isActive(item.href) ? " active" : ""}`}>
-                  {item.icon}
-                  <span>{item.label}</span>
-                  {item.badge && <span className="nav-badge">{item.badge}</span>}
-                </Link>
-              ))}
+              {sec.items.map(renderItem)}
             </div>
           ))}
         </div>
