@@ -16,18 +16,21 @@ export default async function ChatPage() {
   const names: Record<string, { name: string; color: string }> = {};
   for (const u of users) names[u.id] = { name: u.name, color: u.avatarColor };
 
-  // Employees can only see / start conversations within their own department.
+  // Employees can start conversations within their own department AND with any
+  // manager (director / super-admin / HR), so leadership is always reachable.
   const enriched = chats
     .map((c) => {
       const otherId = c.type === "dm" ? c.memberIds.split(",").map((s) => s.trim()).find((id) => id !== user.sub) || "" : "";
-      const name = c.type === "dm" ? umap[otherId]?.name || "Direct message" : c.name;
-      return { id: c.id, type: c.type, name, otherDept: otherId ? umap[otherId]?.department || "" : "" };
+      const other = otherId ? umap[otherId] : undefined;
+      const name = c.type === "dm" ? other?.name || "Direct message" : c.name;
+      const visible = mgr || c.type !== "dm" || other?.department === user.dept || (other ? isManager(other.role) : false);
+      return { id: c.id, type: c.type, name, visible };
     })
-    .filter((c) => mgr || c.type !== "dm" || c.otherDept === user.dept)
+    .filter((c) => c.visible)
     .map(({ id, type, name }) => ({ id, type, name }));
 
   const dmUsers = users
-    .filter((u) => u.id !== user.sub && (mgr || u.department === user.dept))
+    .filter((u) => u.id !== user.sub && (mgr || u.department === user.dept || isManager(u.role)))
     .map((u) => ({ id: u.id, name: u.name }));
 
   return (

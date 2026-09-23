@@ -9,13 +9,14 @@ import { notifyIfEnabled } from "@/lib/notifications";
 import type { SessionUser } from "@/lib/types";
 import { actionError, type Res } from "@/lib/action";
 
-/** Employees may only message within their own department; managers, anyone. */
+/** Employees may message within their own department, plus any manager
+ *  (director / super-admin / HR). Managers may message anyone. */
 async function assertCanMessage(u: SessionUser, otherId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   if (isManager(u.role)) return { ok: true };
   const other = await getUserById(otherId);
   if (!other) return { ok: false, error: "Teammate not found." };
-  if (other.department !== u.dept) return { ok: false, error: "You can only message people in your department." };
-  return { ok: true };
+  if (other.department === u.dept || isManager(other.role)) return { ok: true };
+  return { ok: false, error: "You can only message your department or a manager." };
 }
 
 export async function sendMessageAction(input: { chatId: string; content: string }): Promise<Res> {
