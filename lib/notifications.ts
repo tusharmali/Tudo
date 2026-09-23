@@ -1,5 +1,6 @@
 import { allRows, appendRow, deleteWhere, genId } from "./db";
 import { getSetting, setSetting } from "./settings";
+import { sendToUsers } from "./push";
 
 export interface Notification {
   id: string;
@@ -19,6 +20,16 @@ export async function create(title: string, body: string, target: string, create
     createdBy,
     createdAt: new Date().toISOString(),
   });
+}
+
+/** Notify one member — bell entry + push. Never throws into the caller. */
+export async function notifyUser(userId: string, title: string, body: string, createdBy = "system", url = "/dashboard"): Promise<void> {
+  try {
+    await create(title, body, userId, createdBy);
+    await sendToUsers([userId], { title, body, url }).catch(() => {});
+  } catch {
+    /* a failed notification must not break the action */
+  }
 }
 
 export async function listAll(): Promise<Notification[]> {

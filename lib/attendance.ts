@@ -1,4 +1,4 @@
-import { allRows, appendRow, updateWhere, readConfig, setConfig, genId, todayStr } from "./db";
+import { allRows, appendRow, updateWhere, deleteWhere, readConfig, setConfig, genId, todayStr } from "./db";
 import { getSetting, setSetting } from "./settings";
 
 // ---------- per-person GPS exemption (for fixed PCs that can't move) ----------
@@ -115,6 +115,16 @@ export async function recordCheckIn(input: {
 
 export async function recordCheckOut(userId: string, date: string, time: string): Promise<void> {
   await updateWhere("Attendance", (r) => r.userId === userId && r.date === date, { checkOut: time });
+}
+
+/** Manager fix: clear a mistaken check-out (keeps the check-in). */
+export async function clearCheckOut(userId: string, date: string): Promise<number> {
+  return updateWhere("Attendance", (r) => r.userId === userId && r.date === date, { checkOut: "" });
+}
+
+/** Manager fix: remove a whole day's attendance record (undo a check-in). */
+export async function removeAttendance(userId: string, date: string): Promise<number> {
+  return deleteWhere("Attendance", (r) => r.userId === userId && r.date === date);
 }
 
 /** Distance in metres between two lat/lng points. */

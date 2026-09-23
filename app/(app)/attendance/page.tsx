@@ -4,9 +4,11 @@ import { listUsers, usersMap } from "@/lib/users";
 import { getAttConfig, officeIsSet, getToday, listByDate, isGeoExempt, type AttRecord } from "@/lib/attendance";
 import { statusForToday, listForUser, listPending, listApprovedForDate, listUpcomingApproved } from "@/lib/leave";
 import type { User } from "@/lib/types";
+import { todayStr } from "@/lib/db";
 import CheckInCard from "./CheckInCard";
 import LeaveForm from "./LeaveForm";
 import AdminTools from "./AdminTools";
+import AttendanceEditCell from "./AttendanceEditCell";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +104,7 @@ export default async function AttendancePage() {
                     <th>Check-in</th>
                     <th>Check-out</th>
                     <th>Department</th>
+                    <th style={{ textAlign: "right" }}>Fix</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,6 +127,9 @@ export default async function AttendancePage() {
                       <td className="num">{rec?.checkIn || "—"}</td>
                       <td className="num">{rec?.checkOut || "—"}</td>
                       <td className="tiny muted">{u.department || "—"}</td>
+                      <td>
+                        <AttendanceEditCell userId={u.id} name={u.name} date={todayStr()} hasCheckIn={!!rec?.checkIn} hasCheckOut={!!rec?.checkOut} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

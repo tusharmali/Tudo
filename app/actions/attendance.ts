@@ -12,12 +12,17 @@ import {
   setOffice,
   nowHM,
   isGeoExempt,
+  clearCheckOut,
+  removeAttendance,
 } from "@/lib/attendance";
 import { statusForToday, createLeave, decide, getLeave, type LeaveType } from "@/lib/leave";
-import { create as createNotification } from "@/lib/notifications";
+import { create as createNotification, notifyUser } from "@/lib/notifications";
+import { getUserById } from "@/lib/users";
 import { sendToUsers } from "@/lib/push";
 import { actionError, type Res } from "@/lib/action";
 import { logAction } from "@/lib/audit";
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const fmtRange = (from: string, to: string) => from + (to && to !== from ? ` → ${to}` : "");
 
@@ -140,6 +145,38 @@ export async function decideLeaveAction(input: { id: string; decision: "approved
     revalidatePath("/attendance");
     revalidatePath("/dashboard");
     return { ok: true, message: revoked ? `${label} revoked — member notified` : `Request ${input.decision} — member notified` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function clearCheckOutAction(input: { userId: string; date: string }): Promise<Res> {
+  try {
+    const admin = await requireManager();
+    const date = DATE.test(input.date) ? input.date : todayStr();
+    const n = await clearCheckOut(input.userId, date);
+    if (!n) return { ok: false, error: "No check-out to remove for that day." };
+    const target = await getUserById(input.userId);
+    await logAction(admin, "Attendance", "Removed a check-out", `${target?.name || input.userId} · ${date}`);
+    await notifyUser(input.userId, "Check-out removed", `${admin.name} removed your check-out for ${date} — you're marked as still in.`, admin.sub, "/attendance");
+    revalidatePath("/attendance");
+    return { ok: true, message: "Check-out removed" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function removeAttendanceAction(input: { userId: string; date: string }): Promise<Res> {
+  try {
+    const admin = await requireManager();
+    const date = DATE.test(input.date) ? input.date : todayStr();
+    const n = await removeAttendance(input.userId, date);
+    if (!n) return { ok: false, error: "No attendance record for that day." };
+    const target = await getUserById(input.userId);
+    await logAction(admin, "Attendance", "Cleared attendance record", `${target?.name || input.userId} · ${date}`);
+    await notifyUser(input.userId, "Attendance cleared", `${admin.name} cleared your attendance for ${date}. Please check in again if you're working.`, admin.sub, "/attendance");
+    revalidatePath("/attendance");
+    return { ok: true, message: "Attendance cleared" };
   } catch (e) {
     return actionError(e);
   }

@@ -7,6 +7,8 @@ import { setTwofaEnabled } from "@/lib/twofa";
 import { setGeoExempt } from "@/lib/attendance";
 import { assertCanModify } from "@/lib/owner";
 import { logAction } from "@/lib/audit";
+import { roleLabel } from "@/lib/roles";
+import { notifyUser } from "@/lib/notifications";
 import { actionError, type Res } from "@/lib/action";
 import type { Role } from "@/lib/types";
 
@@ -59,6 +61,7 @@ export async function setUserSuspendedAction(input: { userId: string; suspended:
     }
     await setUserStatus(input.userId, input.suspended ? "suspended" : "active");
     await logAction(me, "People", input.suspended ? "Suspended user" : "Reactivated user", target.name);
+    if (!input.suspended) await notifyUser(input.userId, "Account reactivated", "Your account was reactivated — you can sign in again.", me.sub);
     revalidatePath("/people");
     return { ok: true, message: input.suspended ? `${target.name} suspended` : `${target.name} reactivated` };
   } catch (e) {
@@ -72,6 +75,7 @@ export async function setUserDepartmentAction(input: { userId: string; departmen
     await assertCanModify(input.userId, me.sub);
     await setUserDepartment(input.userId, input.department);
     await logAction(me, "People", "Changed department", `${(await getUserById(input.userId))?.name || input.userId} → ${input.department || "none"}`);
+    await notifyUser(input.userId, "Department updated", `You've been moved to the ${input.department || "no"} department.`, me.sub);
     revalidatePath("/people");
     return { ok: true, message: "Department updated" };
   } catch (e) {
@@ -141,6 +145,7 @@ export async function setUserRoleAction(input: { userId: string; role: Role }): 
     const roleTarget = (await getUserById(input.userId))?.name || input.userId;
     await setUserRole(input.userId, input.role);
     await logAction(me, "People", "Changed role", `${roleTarget} → ${input.role}`);
+    await notifyUser(input.userId, "Role updated", `Your role is now ${roleLabel(input.role)}.`, me.sub);
     revalidatePath("/people");
     return { ok: true, message: "Role updated" };
   } catch (e) {
