@@ -209,12 +209,14 @@ select.inp { cursor: pointer; }
 .cal-av { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 8.5px; font-weight: 700; display: grid; place-items: center; font-family: var(--round); flex: none; }
 .cal-av.wfh { box-shadow: 0 0 0 2px var(--sky, #5CA0DE); }
 .cal-av.half, .cal-av.short { box-shadow: 0 0 0 2px var(--warn, #D99A5B); }
+.cal-av.pending { opacity: .45; box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 3px var(--ink-faint); }
 .cal-more { font-size: 10px; color: var(--ink-faint); align-self: center; }
 .cal-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
 .cal-dot.leave { background: var(--bad); }
 .cal-dot.wfh { background: var(--sky, #5CA0DE); }
 .cal-dot.off { background: var(--ink-faint); }
 .cal-dot.work { background: var(--accent); }
+.cal-dot.req { background: transparent; border: 2px dashed var(--ink-soft); box-sizing: border-box; }
 .cal-cell.off { background: color-mix(in srgb, var(--ink) 8%, var(--surface)); }
 .cal-cell.holiday { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); box-shadow: inset 3px 0 0 var(--bad); }
 .cal-cell.working { background: var(--accent-wash); box-shadow: inset 3px 0 0 var(--accent); }

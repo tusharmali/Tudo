@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setWorkDayAction } from "@/app/actions/workcal";
+import { decideLeaveAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
 import { leaveLabel } from "@/lib/leave";
 
-type Entry = { userId: string; name: string; color: string; dept: string; type: string; half: string; from: string; to: string; reason: string };
+type Entry = { id: string; userId: string; name: string; color: string; dept: string; type: string; half: string; from: string; to: string; reason: string; status: "approved" | "pending" };
 const leavePill = (t: string) => (t === "wfh" ? "p-sky" : t === "half" || t === "short" ? "p-peri" : "p-bad");
 type Override = { type: string; note: string };
 
@@ -28,6 +29,7 @@ export default function CalendarClient({ entries, overrides, isManager }: { entr
   const [sel, setSel] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [decidingId, setDecidingId] = useState("");
   const todayStr = ymd(now.getFullYear(), now.getMonth(), now.getDate());
 
   const byDay = useMemo(() => {
@@ -69,7 +71,15 @@ export default function CalendarClient({ entries, overrides, isManager }: { entr
     setBusy(false);
   }
 
-  const selEntries = sel ? byDay[sel] || [] : [];
+  async function decide(id: string, decision: "approved" | "rejected") {
+    setDecidingId(id);
+    const r = await decideLeaveAction({ id, decision });
+    if (r.ok) { toast(r.message || "Done"); router.refresh(); } else toast(r.error || "Error");
+    setDecidingId("");
+  }
+
+  // Requests needing a decision come first in the day detail.
+  const selEntries = sel ? [...(byDay[sel] || [])].sort((a, b) => Number(a.status === "approved") - Number(b.status === "approved")) : [];
   const selState = sel ? dayState(Number(sel.slice(8)), sel) : null;
 
   return (
@@ -89,7 +99,7 @@ export default function CalendarClient({ entries, overrides, isManager }: { entr
       <div className="row" style={{ gap: 14, marginBottom: 12, flexWrap: "wrap" }}>
         <span className="tiny"><span className="cal-dot off" /> Weekend / holiday (off)</span>
         <span className="tiny"><span className="cal-dot work" /> Working (weekend open)</span>
-        {isManager && <><span className="tiny"><span className="cal-dot leave" /> On leave</span><span className="tiny"><span className="cal-dot wfh" /> WFH</span></>}
+        {isManager && <><span className="tiny"><span className="cal-dot leave" /> On leave</span><span className="tiny"><span className="cal-dot wfh" /> WFH</span><span className="tiny"><span className="cal-dot req" /> Requested</span></>}
       </div>
 
       <div className="card pad">
@@ -111,7 +121,7 @@ export default function CalendarClient({ entries, overrides, isManager }: { entr
                 {isManager && (
                   <div className="cal-people">
                     {list.slice(0, 4).map((e, j) => (
-                      <span key={j} className={`cal-av ${e.type}`} style={{ background: e.color }} title={`${e.name} · ${leaveLabel(e.type, e.half)}`}>{initials(e.name)}</span>
+                      <span key={j} className={`cal-av ${e.type}${e.status === "pending" ? " pending" : ""}`} style={{ background: e.color }} title={`${e.name} · ${leaveLabel(e.type, e.half)}${e.status === "pending" ? " (requested)" : ""}`}>{initials(e.name)}</span>
                     ))}
                     {list.length > 4 && <span className="cal-more">+{list.length - 4}</span>}
                   </div>
@@ -140,16 +150,23 @@ export default function CalendarClient({ entries, overrides, isManager }: { entr
 
           {isManager && (
             selEntries.length === 0 ? (
-              <p className="tiny faint">Nobody on leave or WFH.</p>
+              <p className="tiny faint">Nobody on leave, WFH, or requested off.</p>
             ) : (
-              <div className="stack" style={{ gap: 8 }}>
+              <div className="stack" style={{ gap: 10 }}>
                 {selEntries.map((e, i) => (
-                  <div key={i} className="row" style={{ gap: 10 }}>
-                    <span className="cal-av" style={{ background: e.color }}>{initials(e.name)}</span>
+                  <div key={i} className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+                    <span className={`cal-av${e.status === "pending" ? " pending" : ""}`} style={{ background: e.color }}>{initials(e.name)}</span>
                     <span style={{ fontWeight: 600, fontSize: 13.5 }}>{e.name}</span>
                     <span className={`pill ${leavePill(e.type)}`}>{leaveLabel(e.type, e.half)}</span>
+                    {e.status === "pending" && <span className="pill p-warn">Requested</span>}
                     {e.dept && <span className="tiny faint">{e.dept}</span>}
-                    {e.reason && <span className="tiny muted" style={{ marginLeft: "auto" }}>{e.reason}</span>}
+                    {e.reason && <span className="tiny muted">{e.reason}</span>}
+                    {e.status === "pending" && (
+                      <span className="row" style={{ gap: 6, marginLeft: "auto" }}>
+                        <button className="chip" type="button" disabled={decidingId === e.id} onClick={() => decide(e.id, "approved")}>Approve</button>
+                        <button className="chip" type="button" disabled={decidingId === e.id} onClick={() => decide(e.id, "rejected")} style={{ color: "var(--bad)" }}>Decline</button>
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>

@@ -149,6 +149,8 @@ export async function decideLeaveAction(input: { id: string; decision: "approved
 
     revalidatePath("/attendance");
     revalidatePath("/dashboard");
+    revalidatePath("/calendar");
+    revalidatePath("/team");
     return { ok: true, message: revoked ? `${label} revoked — member notified` : `Request ${input.decision} — member notified` };
   } catch (e) {
     return actionError(e);

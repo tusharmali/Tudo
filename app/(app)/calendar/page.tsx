@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
-import { listAllApproved } from "@/lib/leave";
+import { listAllApproved, listPending, type LeaveReq } from "@/lib/leave";
 import { listOverrides } from "@/lib/workcal";
 import { usersMap } from "@/lib/users";
 import CalendarClient from "./CalendarClient";
@@ -14,13 +14,16 @@ export default async function CalendarPage() {
   if (!user) return null;
   const mgr = isManager(user.role);
 
-  // Working-day overrides are for everyone; leave details only for managers.
-  const [leaves, umap, overrides] = await Promise.all([
+  // Working-day overrides are for everyone; leave details (approved + pending
+  // requests) only for managers.
+  const [leaves, pending, umap, overrides] = await Promise.all([
     mgr ? listAllApproved() : Promise.resolve([]),
+    mgr ? listPending() : Promise.resolve([]),
     usersMap(),
     listOverrides(),
   ]);
-  const entries = leaves.map((l) => ({
+  const toEntry = (l: LeaveReq, status: "approved" | "pending") => ({
+    id: l.id,
     userId: l.userId,
     name: umap[l.userId]?.name || "Someone",
     color: umap[l.userId]?.avatarColor || "#7178DD",
@@ -30,7 +33,9 @@ export default async function CalendarPage() {
     from: l.fromDate,
     to: l.toDate || l.fromDate,
     reason: l.reason,
-  }));
+    status,
+  });
+  const entries = [...leaves.map((l) => toEntry(l, "approved")), ...pending.map((l) => toEntry(l, "pending"))];
 
   return <CalendarClient entries={entries} overrides={overrides} isManager={mgr} />;
 }
