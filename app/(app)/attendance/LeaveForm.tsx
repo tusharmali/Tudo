@@ -4,25 +4,38 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { requestLeaveAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
-import type { LeaveReq } from "@/lib/leave";
+import { leaveLabel, type LeaveReq, type LeaveType } from "@/lib/leave";
 
 const STATUS_CLS: Record<string, string> = { approved: "p-good", rejected: "p-bad", pending: "p-warn" };
+const TYPES: { key: LeaveType; label: string }[] = [
+  { key: "wfh", label: "WFH" },
+  { key: "leave", label: "Full leave" },
+  { key: "half", label: "Half day" },
+  { key: "short", label: "Urgent / early out" },
+];
 
 export default function LeaveForm({ mine }: { mine: LeaveReq[] }) {
   const router = useRouter();
-  const [type, setType] = useState<"leave" | "wfh">("wfh");
+  const [type, setType] = useState<LeaveType>("wfh");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [half, setHalf] = useState<"first" | "second">("first");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const single = type === "half" || type === "short"; // single-day by nature
+
   async function submit() {
     if (!from) {
-      toast("Pick a start date");
+      toast("Pick a date");
+      return;
+    }
+    if (type === "short" && !reason.trim()) {
+      toast("Add a quick reason for the early out");
       return;
     }
     setBusy(true);
-    const res = await requestLeaveAction({ type, fromDate: from, toDate: to || from, reason });
+    const res = await requestLeaveAction({ type, fromDate: from, toDate: single ? from : to || from, reason, half: type === "half" ? half : "" });
     if (res.ok) {
       toast(res.message || "Sent");
       setReason("");
@@ -38,34 +51,51 @@ export default function LeaveForm({ mine }: { mine: LeaveReq[] }) {
   return (
     <div className="card pad">
       <h3 className="sec" style={{ marginBottom: 4 }}>
-        Request WFH or Leave
+        Request time off
       </h3>
       <p className="muted tiny" style={{ margin: "0 0 14px" }}>
-        Goes to a super-admin for approval.
+        WFH, leave, a half day, or an urgent early-out — goes to a super-admin for approval.
       </p>
 
-      <div className="seg" style={{ marginBottom: 12 }}>
-        <button className={type === "wfh" ? "on" : ""} onClick={() => setType("wfh")} type="button">
-          Work from home
-        </button>
-        <button className={type === "leave" ? "on" : ""} onClick={() => setType("leave")} type="button">
-          Leave
-        </button>
+      <div className="seg seg-wrap" style={{ marginBottom: 12 }}>
+        {TYPES.map((t) => (
+          <button key={t.key} className={type === t.key ? "on" : ""} onClick={() => setType(t.key)} type="button">
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="grid g-2" style={{ gap: 12, marginBottom: 12 }}>
-        <div>
-          <label className="lbl">From</label>
-          <input className="inp" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+      {single ? (
+        <div className="grid g-2" style={{ gap: 12, marginBottom: 12 }}>
+          <div>
+            <label className="lbl">Date</label>
+            <input className="inp" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          {type === "half" && (
+            <div>
+              <label className="lbl">Which half</label>
+              <select className="inp" value={half} onChange={(e) => setHalf(e.target.value as "first" | "second")}>
+                <option value="first">First half</option>
+                <option value="second">Second half</option>
+              </select>
+            </div>
+          )}
         </div>
-        <div>
-          <label className="lbl">To</label>
-          <input className="inp" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+      ) : (
+        <div className="grid g-2" style={{ gap: 12, marginBottom: 12 }}>
+          <div>
+            <label className="lbl">From</label>
+            <input className="inp" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div>
+            <label className="lbl">To</label>
+            <input className="inp" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
         </div>
-      </div>
+      )}
       <textarea
         className="inp"
-        placeholder="Reason (optional)"
+        placeholder={type === "short" ? "What's the urgency? (required)" : "Reason (optional)"}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         style={{ minHeight: 64 }}
@@ -84,7 +114,7 @@ export default function LeaveForm({ mine }: { mine: LeaveReq[] }) {
             {mine.slice(0, 5).map((r) => (
               <div className="between" key={r.id}>
                 <div className="tiny">
-                  <b style={{ textTransform: "capitalize" }}>{r.type}</b> · {r.fromDate}
+                  <b>{leaveLabel(r.type, r.half)}</b> · {r.fromDate}
                   {r.toDate && r.toDate !== r.fromDate ? ` → ${r.toDate}` : ""}
                 </div>
                 <span className={`pill ${STATUS_CLS[r.status] || "p-neut"}`} style={{ textTransform: "capitalize" }}>

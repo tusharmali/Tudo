@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { setOfficeAction, decideLeaveAction } from "@/app/actions/attendance";
 import { addTeammateAction } from "@/app/actions/team";
 import { toast } from "@/components/Toaster";
+import { leaveLabel } from "@/lib/leave";
 
-type Pending = { id: string; userName: string; type: string; fromDate: string; toDate: string; reason: string };
+type Pending = { id: string; userName: string; type: string; half: string; fromDate: string; toDate: string; reason: string };
 
 import { getCurrentCoords as getPosition } from "@/lib/geo";
 
@@ -73,7 +74,7 @@ export default function AdminTools({
 
   async function revoke(p: Pending) {
     const range = p.fromDate + (p.toDate && p.toDate !== p.fromDate ? ` → ${p.toDate}` : "");
-    if (!window.confirm(`Revoke ${p.userName}'s approved ${p.type.toUpperCase()} (${range})? They'll be notified.`)) return;
+    if (!window.confirm(`Revoke ${p.userName}'s approved ${leaveLabel(p.type, p.half)} (${range})? They'll be notified.`)) return;
     const res = await decideLeaveAction({ id: p.id, decision: "rejected" });
     if (res.ok) {
       toast(res.message || "Revoked");
@@ -141,7 +142,7 @@ export default function AdminTools({
             {pending.map((p) => (
               <div key={p.id} style={{ borderBottom: "1px solid var(--line-soft)", paddingBottom: 10 }}>
                 <div className="tiny" style={{ fontWeight: 650 }}>
-                  {p.userName} · <span style={{ textTransform: "capitalize" }}>{p.type}</span>
+                  {p.userName} · <span>{leaveLabel(p.type, p.half)}</span>
                 </div>
                 <div className="tiny faint" style={{ margin: "2px 0 8px" }}>
                   {p.fromDate}
@@ -171,7 +172,7 @@ export default function AdminTools({
                 <div key={p.id} className="between" style={{ gap: 8 }}>
                   <div style={{ minWidth: 0 }}>
                     <div className="tiny" style={{ fontWeight: 650 }}>
-                      {p.userName} · <span style={{ textTransform: "capitalize" }}>{p.type}</span>
+                      {p.userName} · <span>{leaveLabel(p.type, p.half)}</span>
                     </div>
                     <div className="tiny faint">
                       {p.fromDate}

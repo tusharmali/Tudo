@@ -35,7 +35,7 @@ export const SCHEMA: Record<SheetName, string[]> = {
   Users: ["id", "name", "handle", "email", "passwordHash", "role", "department", "manageDepts", "avatarColor", "avatar", "phone", "status", "createdAt"],
   Attendance: ["id", "userId", "date", "checkIn", "checkOut", "type", "status", "lat", "lng", "accuracy", "distanceM", "notes"],
   AttendanceConfig: ["key", "value"],
-  LeaveRequests: ["id", "userId", "type", "fromDate", "toDate", "reason", "status", "decidedBy", "decidedAt", "createdAt"],
+  LeaveRequests: ["id", "userId", "type", "fromDate", "toDate", "reason", "half", "status", "decidedBy", "decidedAt", "createdAt"],
   Tasks: ["id", "userId", "date", "parentId", "content", "weekTarget", "section", "status", "updateText", "order", "createdBy", "createdAt"],
   WIP: ["id", "userId", "date", "content", "createdAt"],
   Concerns: ["id", "fromUserId", "toUserId", "subject", "message", "status", "createdAt"],

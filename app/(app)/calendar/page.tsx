@@ -26,6 +26,7 @@ export default async function CalendarPage() {
     color: umap[l.userId]?.avatarColor || "#7178DD",
     dept: umap[l.userId]?.department || "",
     type: l.type,
+    half: l.half,
     from: l.fromDate,
     to: l.toDate || l.fromDate,
     reason: l.reason,

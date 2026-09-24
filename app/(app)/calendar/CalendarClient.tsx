@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setWorkDayAction } from "@/app/actions/workcal";
 import { toast } from "@/components/Toaster";
+import { leaveLabel } from "@/lib/leave";
 
-type Entry = { userId: string; name: string; color: string; dept: string; type: string; from: string; to: string; reason: string };
+type Entry = { userId: string; name: string; color: string; dept: string; type: string; half: string; from: string; to: string; reason: string };
+const leavePill = (t: string) => (t === "wfh" ? "p-sky" : t === "half" || t === "short" ? "p-peri" : "p-bad");
 type Override = { type: string; note: string };
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -109,7 +111,7 @@ export default function CalendarClient({ entries, overrides, isManager }: { entr
                 {isManager && (
                   <div className="cal-people">
                     {list.slice(0, 4).map((e, j) => (
-                      <span key={j} className={`cal-av ${e.type}`} style={{ background: e.color }} title={`${e.name} · ${e.type === "wfh" ? "WFH" : "Leave"}`}>{initials(e.name)}</span>
+                      <span key={j} className={`cal-av ${e.type}`} style={{ background: e.color }} title={`${e.name} · ${leaveLabel(e.type, e.half)}`}>{initials(e.name)}</span>
                     ))}
                     {list.length > 4 && <span className="cal-more">+{list.length - 4}</span>}
                   </div>
@@ -145,7 +147,7 @@ export default function CalendarClient({ entries, overrides, isManager }: { entr
                   <div key={i} className="row" style={{ gap: 10 }}>
                     <span className="cal-av" style={{ background: e.color }}>{initials(e.name)}</span>
                     <span style={{ fontWeight: 600, fontSize: 13.5 }}>{e.name}</span>
-                    <span className={`pill ${e.type === "wfh" ? "p-sky" : "p-bad"}`}>{e.type === "wfh" ? "WFH" : "Leave"}</span>
+                    <span className={`pill ${leavePill(e.type)}`}>{leaveLabel(e.type, e.half)}</span>
                     {e.dept && <span className="tiny faint">{e.dept}</span>}
                     {e.reason && <span className="tiny muted" style={{ marginLeft: "auto" }}>{e.reason}</span>}
                   </div>

@@ -15,7 +15,7 @@ import {
   clearCheckOut,
   removeAttendance,
 } from "@/lib/attendance";
-import { statusForToday, createLeave, decide, getLeave, type LeaveType } from "@/lib/leave";
+import { statusForToday, createLeave, decide, getLeave, leaveLabel, type LeaveType } from "@/lib/leave";
 import { create as createNotification, notifyIfEnabled } from "@/lib/notifications";
 import { isNotifyEnabled } from "@/lib/notify-prefs";
 import { getUserById } from "@/lib/users";
@@ -107,15 +107,17 @@ export async function requestLeaveAction(input: {
   fromDate: string;
   toDate: string;
   reason: string;
+  half?: string;
 }): Promise<Res> {
   try {
     const u = await requireUser();
-    if (!input.fromDate) return { ok: false, error: "Pick a start date." };
-    if (input.type !== "leave" && input.type !== "wfh") return { ok: false, error: "Choose leave or WFH." };
-    await createLeave(u.sub, input.type, input.fromDate, input.toDate || input.fromDate, input.reason);
-    await logAction(u, "Attendance", `Requested ${input.type === "wfh" ? "WFH" : "leave"}`, fmtRange(input.fromDate, input.toDate || input.fromDate));
+    if (!input.fromDate) return { ok: false, error: "Pick a date." };
+    if (!["leave", "wfh", "half", "short"].includes(input.type)) return { ok: false, error: "Pick a request type." };
+    await createLeave(u.sub, input.type, input.fromDate, input.toDate || input.fromDate, input.reason, input.half || "");
+    const label = leaveLabel(input.type, input.half || "");
+    await logAction(u, "Attendance", `Requested ${label}`, fmtRange(input.fromDate, input.toDate || input.fromDate));
     revalidatePath("/attendance");
-    return { ok: true, message: `${input.type === "wfh" ? "WFH" : "Leave"} request sent for approval` };
+    return { ok: true, message: `${label} request sent for approval` };
   } catch (e) {
     return actionError(e);
   }
@@ -130,7 +132,7 @@ export async function decideLeaveAction(input: { id: string; decision: "approved
     await decide(input.id, input.decision, admin.sub);
 
     // Notify the member (bell + push).
-    const label = req.type === "wfh" ? "WFH" : "Leave";
+    const label = leaveLabel(req.type, req.half);
     const range = fmtRange(req.fromDate, req.toDate);
     const revoked = wasApproved && input.decision === "rejected";
     const title = input.decision === "approved" ? `${label} approved ✅` : revoked ? `${label} revoked ⚠️` : `${label} not approved`;

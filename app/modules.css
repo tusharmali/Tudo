@@ -26,6 +26,7 @@ select.inp { cursor: pointer; }
 .seg { display: inline-flex; gap: 3px; background: var(--surface-3); padding: 3px; border-radius: var(--r-pill); }
 .seg button { padding: 5px 12px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; color: var(--ink-soft); }
 .seg button.on { background: var(--surface); color: var(--accent-ink); box-shadow: var(--shadow-sm); }
+.seg.seg-wrap { flex-wrap: wrap; }
 
 /* progress bar */
 .bar-track { flex: 1; height: 8px; border-radius: 8px; background: var(--surface-3); overflow: hidden; }
@@ -207,6 +208,7 @@ select.inp { cursor: pointer; }
 .cal-people { display: flex; flex-wrap: wrap; gap: 2px; }
 .cal-av { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 8.5px; font-weight: 700; display: grid; place-items: center; font-family: var(--round); flex: none; }
 .cal-av.wfh { box-shadow: 0 0 0 2px var(--sky, #5CA0DE); }
+.cal-av.half, .cal-av.short { box-shadow: 0 0 0 2px var(--warn, #D99A5B); }
 .cal-more { font-size: 10px; color: var(--ink-faint); align-self: center; }
 .cal-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
 .cal-dot.leave { background: var(--bad); }

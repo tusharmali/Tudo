@@ -28,7 +28,7 @@ export default async function AttendancePage() {
     isGeoExempt(user.sub),
   ]);
 
-  type ReqRow = { id: string; userName: string; type: string; fromDate: string; toDate: string; reason: string };
+  type ReqRow = { id: string; userName: string; type: string; half: string; fromDate: string; toDate: string; reason: string };
   let roster: RosterRow[] = [];
   let pending: ReqRow[] = [];
   let approvedReqs: ReqRow[] = [];
@@ -46,6 +46,8 @@ export default async function AttendancePage() {
       const rec = today.find((t) => t.userId === u.id);
       const onLeave = approved.some((a) => a.userId === u.id && a.type === "leave");
       const wfhAppr = approved.some((a) => a.userId === u.id && a.type === "wfh");
+      const halfReq = approved.find((a) => a.userId === u.id && a.type === "half");
+      const shortReq = approved.find((a) => a.userId === u.id && a.type === "short");
       let label = "Not in";
       let cls = "p-warn";
       if (rec?.checkIn) {
@@ -56,19 +58,29 @@ export default async function AttendancePage() {
           label = "In office";
           cls = "p-good";
         }
+        // A half-day / early-out person still checks in — flag it alongside.
+        if (halfReq) label = "In · half day";
+        else if (shortReq) label = "In · early out";
       } else if (onLeave) {
         label = "On leave";
         cls = "p-bad";
+      } else if (halfReq) {
+        label = "Half day";
+        cls = "p-peri";
+      } else if (shortReq) {
+        label = "Early out";
+        cls = "p-peri";
       } else if (wfhAppr) {
         label = "WFH (not in)";
         cls = "p-sky";
       }
       return { u, rec, label, cls };
     });
-    const mapReq = (p: { id: string; userId: string; type: string; fromDate: string; toDate: string; reason: string }): ReqRow => ({
+    const mapReq = (p: { id: string; userId: string; type: string; fromDate: string; toDate: string; reason: string; half: string }): ReqRow => ({
       id: p.id,
       userName: umap[p.userId]?.name || "Unknown",
       type: p.type,
+      half: p.half,
       fromDate: p.fromDate,
       toDate: p.toDate,
       reason: p.reason,

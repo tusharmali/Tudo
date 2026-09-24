@@ -1,7 +1,17 @@
 import { allRows, appendRow, updateWhere, genId, todayStr } from "./db";
 
-export type LeaveType = "leave" | "wfh";
+export type LeaveType = "leave" | "wfh" | "half" | "short";
 export type LeaveStatus = "pending" | "approved" | "rejected";
+
+/** leave = full day off · wfh = work from home · half = half-day leave
+ *  (portion in `half`) · short = leaving early / urgency. half & short are
+ *  partial-day, so they don't lock attendance. */
+export function leaveLabel(type: string, half = ""): string {
+  if (type === "wfh") return "WFH";
+  if (type === "half") return half === "first" ? "Half day (1st)" : half === "second" ? "Half day (2nd)" : "Half day";
+  if (type === "short") return "Early out";
+  return "Leave";
+}
 
 export interface LeaveReq {
   id: string;
@@ -10,6 +20,7 @@ export interface LeaveReq {
   fromDate: string;
   toDate: string;
   reason: string;
+  half: string; // "first" | "second" | "" — the portion, for half-day
   status: LeaveStatus;
   decidedBy: string;
   decidedAt: string;
@@ -22,14 +33,18 @@ export async function createLeave(
   fromDate: string,
   toDate: string,
   reason: string,
+  half = "",
 ): Promise<void> {
+  // Half-day and early-out are single-day by nature.
+  const to = type === "half" || type === "short" ? fromDate : toDate || fromDate;
   await appendRow("LeaveRequests", {
     id: genId("lv"),
     userId,
     type,
     fromDate,
-    toDate: toDate || fromDate,
+    toDate: to,
     reason: reason || "",
+    half: type === "half" && (half === "first" || half === "second") ? half : "",
     status: "pending",
     decidedBy: "",
     decidedAt: "",
