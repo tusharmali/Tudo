@@ -35,7 +35,7 @@ export type SheetName =
   | "AuditLog";
 
 export const SCHEMA: Record<SheetName, string[]> = {
-  Users: ["id", "name", "handle", "email", "passwordHash", "role", "department", "manageDepts", "avatarColor", "avatar", "phone", "status", "createdAt"],
+  Users: ["id", "name", "handle", "email", "passwordHash", "role", "department", "manageDepts", "avatarColor", "avatar", "phone", "status", "remote", "createdAt"],
   Attendance: ["id", "userId", "date", "checkIn", "checkOut", "type", "status", "lat", "lng", "accuracy", "distanceM", "notes"],
   AttendanceConfig: ["key", "value"],
   LeaveRequests: ["id", "userId", "type", "fromDate", "toDate", "reason", "half", "status", "decidedBy", "decidedAt", "createdAt"],

@@ -45,7 +45,8 @@ export async function checkInAction(coords: Coords): Promise<Res> {
     let distanceM = 0;
 
     const exempt = await isGeoExempt(u.sub);
-    if (st.wfhApproved) {
+    const remote = u.remote === "true"; // permanent remote/WFH worker
+    if (st.wfhApproved || remote) {
       type = "wfh";
       status = "wfh";
     } else if (officeIsSet(cfg) && !exempt) {

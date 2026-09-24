@@ -13,6 +13,7 @@ export default function CheckInCard({
   onLeave,
   wfhApproved,
   locationExempt = false,
+  remote = false,
   breakOpen = null,
   breakCount = 0,
   breakMin = 0,
@@ -21,6 +22,7 @@ export default function CheckInCard({
   onLeave: boolean;
   wfhApproved: boolean;
   locationExempt?: boolean;
+  remote?: boolean;
   breakOpen?: { start: string; since: string } | null;
   breakCount?: number;
   breakMin?: number;
@@ -41,13 +43,13 @@ export default function CheckInCard({
     setBusy(true);
     try {
       let coords: Coords = { lat: 0, lng: 0, accuracy: 0 };
-      if (!wfhApproved && !locationExempt) {
+      if (!wfhApproved && !remote && !locationExempt) {
         coords = await getCurrentCoords();
       } else {
         try {
           coords = await getCurrentCoords();
         } catch {
-          /* WFH / GPS-exempt: location is optional */
+          /* remote / WFH / GPS-exempt: location is optional */
         }
       }
       const res = await checkInAction(coords);
@@ -130,18 +132,20 @@ export default function CheckInCard({
           <>
             <span className="pill p-peri">
               <span className="d" />
-              {wfhApproved ? "WFH approved" : "Ready"}
+              {remote ? "Remote" : wfhApproved ? "WFH approved" : "Ready"}
             </span>
             <h3 className="sec" style={{ fontSize: 20, margin: "12px 0 4px" }}>
               Mark your attendance
             </h3>
             <p className="muted tiny" style={{ margin: "0 0 16px" }}>
-              {wfhApproved
-                ? "You're approved to work from home today — check in from anywhere."
-                : "We'll verify you're at the office by GPS. Make sure location is on."}
+              {remote
+                ? "You work remotely — check in from anywhere, no location needed. You'll be marked WFH."
+                : wfhApproved
+                  ? "You're approved to work from home today — check in from anywhere."
+                  : "We'll verify you're at the office by GPS. Make sure location is on."}
             </p>
             <button className="btn btn-primary" onClick={doCheckIn} disabled={busy}>
-              {busy ? "Checking location…" : "Check in"}
+              {busy ? (remote || wfhApproved ? "Checking…" : "Checking location…") : "Check in"}
             </button>
           </>
         )}

@@ -77,6 +77,9 @@ export default async function AttendancePage() {
       } else if (wfhAppr) {
         label = "WFH (not in)";
         cls = "p-sky";
+      } else if (u.remote === "true") {
+        label = "Remote (not in)";
+        cls = "p-sky";
       }
       return { u, rec, label, cls };
     });
@@ -101,6 +104,7 @@ export default async function AttendancePage() {
           onLeave={myStatus.onLeave}
           wfhApproved={myStatus.wfhApproved}
           locationExempt={myExempt}
+          remote={user.remote === "true"}
           breakOpen={openBreak ? { start: openBreak.start, since: openBreak.createdAt } : null}
           breakCount={myBreaks.length}
           breakMin={breakMinToday}

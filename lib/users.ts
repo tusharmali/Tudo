@@ -23,6 +23,7 @@ function rowToUser(r: Row): User {
     avatar: r.avatar || "",
     phone: r.phone || "",
     status: r.status || "active",
+    remote: r.remote || "",
   };
 }
 
@@ -147,6 +148,21 @@ export async function setUserManageDepts(userId: string, depts: string[]): Promi
   const clean = Array.from(new Set(depts.map((d) => d.trim()).filter(Boolean))).join(",");
   const changed = await updateWhere("Users", (r) => r.id === userId, { manageDepts: clean });
   if (!changed) throw new Error("User not found.");
+}
+
+/** Manager: mark a user as a remote/WFH worker (checks in from anywhere, marked
+ *  WFH) or clear it. */
+export async function setUserRemote(userId: string, remote: boolean): Promise<void> {
+  const changed = await updateWhere("Users", (r) => r.id === userId, { remote: remote ? "true" : "" });
+  if (!changed) throw new Error("User not found.");
+}
+
+/** Manager: set the remote/WFH flag for every member of a department at once.
+ *  Returns how many members were updated. */
+export async function setDepartmentRemote(department: string, remote: boolean): Promise<number> {
+  const dept = department.trim();
+  if (!dept) return 0;
+  return updateWhere("Users", (r) => (r.department || "") === dept, { remote: remote ? "true" : "" });
 }
 
 /** Manager: change a user's login email (must be unique). */

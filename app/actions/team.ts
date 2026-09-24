@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireManager, requireAdmin } from "@/lib/dal";
-import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail, setUserManageDepts } from "@/lib/users";
+import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail, setUserManageDepts, setUserRemote, setDepartmentRemote } from "@/lib/users";
 import { setTwofaEnabled } from "@/lib/twofa";
 import { setGeoExempt } from "@/lib/attendance";
 import { assertCanModify } from "@/lib/owner";
@@ -122,6 +122,36 @@ export async function setUserGeoExemptAction(input: { userId: string; exempt: bo
     await logAction(me, "People", input.exempt ? "Turned off GPS check-in" : "Turned on GPS check-in", target.name);
     revalidatePath("/people");
     return { ok: true, message: input.exempt ? `${target.name} can check in without GPS` : `${target.name} needs GPS to check in` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setUserRemoteAction(input: { userId: string; remote: boolean }): Promise<Res> {
+  try {
+    const me = await requireManager();
+    const target = await getUserById(input.userId);
+    if (!target) return { ok: false, error: "User not found." };
+    await setUserRemote(input.userId, input.remote);
+    await logAction(me, "People", input.remote ? "Marked as remote (WFH)" : "Removed remote (WFH)", target.name);
+    revalidatePath("/people");
+    revalidatePath("/attendance");
+    return { ok: true, message: input.remote ? `${target.name} is now a remote worker — checks in from anywhere as WFH` : `${target.name} is back to office check-in` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setDepartmentRemoteAction(input: { department: string; remote: boolean }): Promise<Res> {
+  try {
+    const me = await requireManager();
+    const dept = (input.department || "").trim();
+    if (!dept) return { ok: false, error: "Pick a department." };
+    const n = await setDepartmentRemote(dept, input.remote);
+    await logAction(me, "People", input.remote ? "Marked department remote (WFH)" : "Cleared department remote (WFH)", `${dept} · ${n} member${n === 1 ? "" : "s"}`);
+    revalidatePath("/people");
+    revalidatePath("/attendance");
+    return { ok: true, message: n === 0 ? `No members in ${dept}` : input.remote ? `${n} ${dept} member${n === 1 ? "" : "s"} set to remote (WFH)` : `${n} ${dept} member${n === 1 ? "" : "s"} back to office check-in` };
   } catch (e) {
     return actionError(e);
   }

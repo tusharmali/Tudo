@@ -10,6 +10,8 @@ import {
   setUserEmailAction,
   setUserGeoExemptAction,
   setUserManageDeptsAction,
+  setUserRemoteAction,
+  setDepartmentRemoteAction,
   setTwofaEnabledAction,
 } from "@/app/actions/team";
 import { resetPasswordAction } from "@/app/actions/account";
@@ -18,7 +20,7 @@ import { toast } from "@/components/Toaster";
 import Avatar, { avatarSrc } from "@/components/Avatar";
 import type { Role } from "@/lib/types";
 
-type Person = { id: string; name: string; email: string; role: Role; department: string; status: string; color: string; avatar: string; manageDepts: string };
+type Person = { id: string; name: string; email: string; role: Role; department: string; status: string; color: string; avatar: string; manageDepts: string; remote: string };
 const BASE_DEPTS = ["Leadership", "Tech", "Digi", "Support", "HR"];
 
 const roleClass: Record<string, string> = { superadmin: "p-peri", director: "p-good", hr: "p-sky", deptadmin: "p-warn", employee: "p-neut" };
@@ -49,6 +51,7 @@ export default function PeopleClient({
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "employee" as Role, department: "" });
   const [editEmail, setEditEmail] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState("");
+  const [bulkDept, setBulkDept] = useState("");
 
   const filtered = users.filter((u) => {
     const s = q.trim().toLowerCase();
@@ -102,6 +105,15 @@ export default function PeopleClient({
   }
   function toggleGeo(u: Person) {
     run(`geo:${u.id}`, () => setUserGeoExemptAction({ userId: u.id, exempt: !exemptSet.has(u.id) }));
+  }
+  function toggleRemote(u: Person) {
+    run(`rem:${u.id}`, () => setUserRemoteAction({ userId: u.id, remote: u.remote !== "true" }));
+  }
+  function bulkRemote(remote: boolean) {
+    if (!bulkDept) return toast("Pick a department first");
+    const n = users.filter((u) => u.department === bulkDept).length;
+    if (!confirm(`${remote ? "Mark" : "Clear remote for"} all ${n} member${n === 1 ? "" : "s"} in ${bulkDept}? They'll ${remote ? "check in from anywhere as WFH" : "need office check-in"}.`)) return;
+    run("bulkrem", () => setDepartmentRemoteAction({ department: bulkDept, remote }));
   }
   function toggleManage(u: Person, dept: string) {
     const cur = (u.manageDepts || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -167,6 +179,20 @@ export default function PeopleClient({
           <h3 className="sec">Team members</h3>
           <input className="inp" placeholder="Search name, email, dept…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 280 }} />
         </div>
+        <div className="row" style={{ padding: "0 20px 14px", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <span className="tiny muted" style={{ fontWeight: 600 }}>🏠 Remote / WFH by department:</span>
+          <select className="inp" style={{ maxWidth: 190, padding: "6px 8px", fontSize: 12.5 }} value={bulkDept} onChange={(e) => setBulkDept(e.target.value)}>
+            <option value="">Select department…</option>
+            {deptOptions.filter((d) => users.some((u) => u.department === d)).map((d) => {
+              const members = users.filter((u) => u.department === d);
+              const allOn = members.length > 0 && members.every((u) => u.remote === "true");
+              return <option key={d} value={d}>{d} ({members.length}){allOn ? " · all remote" : ""}</option>;
+            })}
+          </select>
+          <button className="chip" disabled={!bulkDept || busy === "bulkrem"} onClick={() => bulkRemote(true)}>Mark all remote</button>
+          <button className="chip" disabled={!bulkDept || busy === "bulkrem"} onClick={() => bulkRemote(false)}>Clear</button>
+          <span className="tiny faint">Remote members check in from anywhere and are recorded as WFH.</span>
+        </div>
         <div className="tbl-wrap">
           <table className="tbl">
             <thead><tr><th>Member</th><th>Role</th><th>Department</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
@@ -182,7 +208,10 @@ export default function PeopleClient({
                       <div className="row" style={{ gap: 10, minWidth: 0 }}>
                         <Avatar name={u.name} color={u.color} src={avatarSrc(u)} size="sm" />
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600 }}>{u.name}{isSelf ? " (you)" : ""}</div>
+                          <div className="row" style={{ gap: 6 }}>
+                            <span style={{ fontWeight: 600 }}>{u.name}{isSelf ? " (you)" : ""}</span>
+                            {u.remote === "true" && <span className="pill p-sky" style={{ fontSize: 9.5, padding: "1px 6px" }}>WFH</span>}
+                          </div>
                           {locked ? (
                             <div className="tiny faint" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }} title="Only the owner can change this account">
                               {u.email} 🔒
@@ -251,6 +280,17 @@ export default function PeopleClient({
                     <td>
                       <div className="row" style={{ gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                         {locked && <span className="tiny faint" title="Only the owner can change this account">🔒 Protected</span>}
+                        {!locked && (
+                          <button
+                            className="btn btn-ghost"
+                            style={{ padding: "6px 10px", fontSize: 12, color: u.remote === "true" ? "var(--sky, #5CA0DE)" : "var(--ink-faint)" }}
+                            title={u.remote === "true" ? "Remote worker — checks in from anywhere as WFH. Click for office check-in." : "Office check-in. Click to mark as remote / WFH."}
+                            onClick={() => toggleRemote(u)}
+                            disabled={busy === `rem:${u.id}`}
+                          >
+                            {u.remote === "true" ? "🏠 Remote" : "🏠 Office"}
+                          </button>
+                        )}
                         {!locked && (
                           <button
                             className={`btn ${exemptSet.has(u.id) ? "btn-ghost" : "btn-ghost"}`}

@@ -6,7 +6,7 @@ import { checkInAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
 import { getCurrentCoords, onLocationEnabled, type Coords } from "@/lib/geo";
 
-export default function CheckInPrompt({ wfhApproved, locationExempt = false }: { wfhApproved: boolean; locationExempt?: boolean }) {
+export default function CheckInPrompt({ wfhApproved, locationExempt = false, remote = false }: { wfhApproved: boolean; locationExempt?: boolean; remote?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -24,12 +24,12 @@ export default function CheckInPrompt({ wfhApproved, locationExempt = false }: {
     setBusy(true);
     try {
       let coords: Coords = { lat: 0, lng: 0, accuracy: 0 };
-      if (!wfhApproved && !locationExempt) coords = await getCurrentCoords();
+      if (!wfhApproved && !remote && !locationExempt) coords = await getCurrentCoords();
       else {
         try {
           coords = await getCurrentCoords();
         } catch {
-          /* WFH / GPS-exempt: location optional */
+          /* remote / WFH / GPS-exempt: location optional */
         }
       }
       const res = await checkInAction(coords);
@@ -57,7 +57,7 @@ export default function CheckInPrompt({ wfhApproved, locationExempt = false }: {
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 750, fontSize: 15.5 }}>You&apos;re not checked in yet</div>
-            <div className="tiny muted">{wfhApproved ? "You're approved for WFH today — check in from anywhere." : "Mark your attendance for today. It only takes a tap."}</div>
+            <div className="tiny muted">{remote ? "You work remotely — check in from anywhere, no location needed." : wfhApproved ? "You're approved for WFH today — check in from anywhere." : "Mark your attendance for today. It only takes a tap."}</div>
           </div>
         </div>
         <div className="row" style={{ gap: 8, flex: "none" }}>

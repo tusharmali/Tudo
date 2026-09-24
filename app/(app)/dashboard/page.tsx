@@ -88,6 +88,8 @@ export default async function DashboardPage() {
     attLabel = myAtt.type === "wfh" ? "WFH" : "Checked in";
     attSub = `Since ${myAtt.checkIn}${myAtt.checkOut ? ` · out ${myAtt.checkOut}` : ""}`;
     attTint = "tint-mint";
+  } else if (user.remote === "true") {
+    attSub = "Remote · check in from anywhere →";
   }
 
   // Admin team snapshot
@@ -147,7 +149,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {!myAtt?.checkIn && !myLeave.onLeave && <CheckInPrompt wfhApproved={myLeave.wfhApproved} locationExempt={myExempt} />}
+      {!myAtt?.checkIn && !myLeave.onLeave && <CheckInPrompt wfhApproved={myLeave.wfhApproved} locationExempt={myExempt} remote={user.remote === "true"} />}
 
       {onShift && (
         <div style={{ marginBottom: 18 }}>
