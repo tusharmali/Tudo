@@ -6,17 +6,24 @@ import { checkInAction, checkOutAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
 import { getCurrentCoords, onLocationEnabled, type Coords } from "@/lib/geo";
 import type { AttRecord } from "@/lib/attendance";
+import BreakControl from "@/components/BreakControl";
 
 export default function CheckInCard({
   today,
   onLeave,
   wfhApproved,
   locationExempt = false,
+  breakOpen = null,
+  breakCount = 0,
+  breakMin = 0,
 }: {
   today: AttRecord | null;
   onLeave: boolean;
   wfhApproved: boolean;
   locationExempt?: boolean;
+  breakOpen?: { start: string; since: string } | null;
+  breakCount?: number;
+  breakMin?: number;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -139,6 +146,12 @@ export default function CheckInCard({
           </>
         )}
       </div>
+
+      {checkedIn && !checkedOut && !onLeave && (
+        <div style={{ flexBasis: "100%" }}>
+          <BreakControl checkedIn open={breakOpen} count={breakCount} earlierMin={breakMin} />
+        </div>
+      )}
     </div>
   );
 }

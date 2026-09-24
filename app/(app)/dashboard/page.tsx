@@ -10,9 +10,11 @@ import { listForUser as listTasksForUser, toTree } from "@/lib/tasks";
 import { listForUser as listNotifsForUser } from "@/lib/notifications";
 import { listReleases } from "@/lib/releases";
 import { listPolls, allVotes, pollIsOpen, canSeePoll } from "@/lib/polls";
+import { listBreaks } from "@/lib/breaks";
 import { getSettings } from "@/lib/settings";
 import { listUsers } from "@/lib/users";
 import DashboardPolls from "./DashboardPolls";
+import BreakControl from "@/components/BreakControl";
 import type { User } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +25,7 @@ export default async function DashboardPage() {
   const isAdmin = isManager(user.role);
   const date = todayStr();
 
-  const [settings, myAtt, myLeave, myTasks, notifs, releases, myExempt, polls, votes] = await Promise.all([
+  const [settings, myAtt, myLeave, myTasks, notifs, releases, myExempt, polls, votes, myBreaks] = await Promise.all([
     getSettings(),
     getToday(user.sub),
     statusForToday(user.sub),
@@ -33,7 +35,14 @@ export default async function DashboardPage() {
     isGeoExempt(user.sub),
     listPolls(),
     allVotes(),
+    listBreaks({ date, userIds: [user.sub] }),
   ]);
+
+  // Break state for the shift break widget (only while on shift).
+  const openBreak = myBreaks.find((b) => !b.end) || null;
+  const breaksToday = myBreaks.length;
+  const breakMinToday = myBreaks.filter((b) => b.end).reduce((s, b) => s + Number(b.durationMin || 0), 0);
+  const onShift = !!myAtt?.checkIn && !myAtt?.checkOut && !myLeave.onLeave;
 
   // Open polls this person can vote in, with their current choice.
   const myVotes: Record<string, string> = {};
@@ -139,6 +148,17 @@ export default async function DashboardPage() {
   return (
     <>
       {!myAtt?.checkIn && !myLeave.onLeave && <CheckInPrompt wfhApproved={myLeave.wfhApproved} locationExempt={myExempt} />}
+
+      {onShift && (
+        <div style={{ marginBottom: 18 }}>
+          <BreakControl
+            checkedIn
+            open={openBreak ? { start: openBreak.start, since: openBreak.createdAt } : null}
+            count={breaksToday}
+            earlierMin={breakMinToday}
+          />
+        </div>
+      )}
 
       {pollCards.length > 0 && <DashboardPolls polls={pollCards} />}
 

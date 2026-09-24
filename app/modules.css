@@ -340,3 +340,13 @@ a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .bubble { max-width: 100%; }
   .bubble-row { max-width: 88%; }
 }
+
+/* --- Shift breaks --- */
+.brk-box { display: flex; align-items: center; gap: 14px; padding: 13px 15px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+.brk-box.on { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 10%, var(--surface)); }
+.brk-ic { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center; background: var(--surface-3); color: var(--ink-soft); }
+.brk-box.on .brk-ic { background: color-mix(in srgb, var(--warn) 22%, var(--surface)); color: var(--warn); }
+.brk-ic.pulse { animation: brkpulse 1.8s ease-in-out infinite; }
+@keyframes brkpulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 45%, transparent); } 60% { box-shadow: 0 0 0 7px transparent; } }
+.brk-title { font-weight: 700; font-size: 14.5px; }
+.brk-chip { display: flex; align-items: center; gap: 9px; padding: 7px 13px 7px 7px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface-2); }

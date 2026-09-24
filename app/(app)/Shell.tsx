@@ -7,7 +7,7 @@ import { logout } from "@/app/actions/auth";
 import NotificationBell from "@/components/NotificationBell";
 import PwaPrompts from "@/components/PwaPrompts";
 import Avatar, { avatarSrc } from "@/components/Avatar";
-import { isManager, roleLabel } from "@/lib/roles";
+import { isManager, canPlan, roleLabel } from "@/lib/roles";
 import type { SessionUser } from "@/lib/types";
 
 const svg = (d: ReactNode) => (
@@ -41,9 +41,10 @@ const icons = {
   calendar: svg(<><rect x="3" y="5" width="18" height="16" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18M8 3v4M16 3v4" /></>),
   wallet: svg(<><rect x="3" y="6" width="18" height="13" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M16 14h2" /></>),
   assets: svg(<><rect x="3" y="4" width="18" height="12" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 20h8M12 16v4" /></>),
+  coffee: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8ZM17 9h2.5a2.5 2.5 0 0 1 0 5H17M7 3v2M11 3v2M15 3v2" />),
 };
 
-type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[]; ownerOnly?: boolean };
+type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[]; ownerOnly?: boolean; plannerOnly?: boolean };
 type NavSection = { section: string | null; adminOnly?: boolean; items: NavItem[] };
 
 const NAV: NavSection[] = [
@@ -66,6 +67,7 @@ const NAV: NavSection[] = [
       { href: "/milestones", label: "Milestones", icon: icons.milestones, depts: ["Support"] },
       { href: "/kudos", label: "Kudos", icon: icons.kudos },
       { href: "/calendar", label: "Calendar", icon: icons.calendar },
+      { href: "/team", label: "Team Log", icon: icons.coffee, plannerOnly: true },
       { href: "/fun", label: "Fun Zone", icon: icons.fun },
     ],
   },
@@ -165,7 +167,9 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
   // Managers see everything; employees see shared items + their department's items.
   const canSeeItem = (item: NavItem) =>
-    (!item.ownerOnly || isOwner) && (isManager(user.role) || !item.depts || item.depts.includes(user.dept));
+    (!item.ownerOnly || isOwner) &&
+    (!item.plannerOnly || canPlan(user)) &&
+    (isManager(user.role) || !item.depts || item.depts.includes(user.dept));
   const sections = NAV
     .filter((s) => !s.adminOnly || isManager(user.role))
     .map((s) => ({ ...s, items: s.items.filter(canSeeItem) }))

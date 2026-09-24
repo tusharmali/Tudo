@@ -3,6 +3,7 @@ import { isManager } from "@/lib/roles";
 import { listUsers, usersMap } from "@/lib/users";
 import { getAttConfig, officeIsSet, getToday, listByDate, isGeoExempt, type AttRecord } from "@/lib/attendance";
 import { statusForToday, listForUser, listPending, listApprovedForDate, listUpcomingApproved } from "@/lib/leave";
+import { listBreaks } from "@/lib/breaks";
 import type { User } from "@/lib/types";
 import { todayStr } from "@/lib/db";
 import Avatar, { avatarSrc } from "@/components/Avatar";
@@ -20,13 +21,16 @@ export default async function AttendancePage() {
   if (!user) return null;
   const isAdmin = isManager(user.role);
 
-  const [cfg, myToday, myStatus, myLeaves, myExempt] = await Promise.all([
+  const [cfg, myToday, myStatus, myLeaves, myExempt, myBreaks] = await Promise.all([
     getAttConfig(),
     getToday(user.sub),
     statusForToday(user.sub),
     listForUser(user.sub),
     isGeoExempt(user.sub),
+    listBreaks({ date: todayStr(), userIds: [user.sub] }),
   ]);
+  const openBreak = myBreaks.find((b) => !b.end) || null;
+  const breakMinToday = myBreaks.filter((b) => b.end).reduce((s, b) => s + Number(b.durationMin || 0), 0);
 
   type ReqRow = { id: string; userName: string; type: string; half: string; fromDate: string; toDate: string; reason: string };
   let roster: RosterRow[] = [];
@@ -92,7 +96,15 @@ export default async function AttendancePage() {
   return (
     <>
       <div className="grid g-2-1" style={{ marginBottom: 18 }}>
-        <CheckInCard today={myToday} onLeave={myStatus.onLeave} wfhApproved={myStatus.wfhApproved} locationExempt={myExempt} />
+        <CheckInCard
+          today={myToday}
+          onLeave={myStatus.onLeave}
+          wfhApproved={myStatus.wfhApproved}
+          locationExempt={myExempt}
+          breakOpen={openBreak ? { start: openBreak.start, since: openBreak.createdAt } : null}
+          breakCount={myBreaks.length}
+          breakMin={breakMinToday}
+        />
         <LeaveForm mine={myLeaves} />
       </div>
 
