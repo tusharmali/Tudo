@@ -20,6 +20,9 @@ export type SheetName =
   | "Expenses"
   | "Assets"
   | "WorkCalendar"
+  | "Polls"
+  | "PollVotes"
+  | "Breaks"
   | "Releases"
   | "FunActivity"
   | "FunContributions"
@@ -48,6 +51,9 @@ export const SCHEMA: Record<SheetName, string[]> = {
   Expenses: ["id", "userId", "amount", "category", "note", "date", "receiptKey", "status", "decidedBy", "decidedAt", "createdAt"],
   Assets: ["id", "name", "type", "serial", "provider", "assignedTo", "status", "cost", "purchaseDate", "notes", "createdBy", "createdAt"],
   WorkCalendar: ["date", "type", "note", "setBy", "createdAt"],
+  Polls: ["id", "question", "options", "target", "createdBy", "closesAt", "createdAt"],
+  PollVotes: ["id", "pollId", "userId", "option", "createdAt"],
+  Breaks: ["id", "userId", "date", "start", "end", "durationMin", "note", "createdAt"],
   Releases: ["id", "title", "scheduledDate", "points", "resources", "status", "createdAt"],
   FunActivity: ["id", "title", "isActive", "config", "createdAt"],
   FunContributions: ["id", "activityId", "userId", "content", "createdAt"],

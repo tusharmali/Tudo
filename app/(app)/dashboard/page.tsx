@@ -9,8 +9,10 @@ import { statusForToday, listApprovedForDate, listPending } from "@/lib/leave";
 import { listForUser as listTasksForUser, toTree } from "@/lib/tasks";
 import { listForUser as listNotifsForUser } from "@/lib/notifications";
 import { listReleases } from "@/lib/releases";
+import { listPolls, allVotes, pollIsOpen, canSeePoll } from "@/lib/polls";
 import { getSettings } from "@/lib/settings";
 import { listUsers } from "@/lib/users";
+import DashboardPolls from "./DashboardPolls";
 import type { User } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +23,7 @@ export default async function DashboardPage() {
   const isAdmin = isManager(user.role);
   const date = todayStr();
 
-  const [settings, myAtt, myLeave, myTasks, notifs, releases, myExempt] = await Promise.all([
+  const [settings, myAtt, myLeave, myTasks, notifs, releases, myExempt, polls, votes] = await Promise.all([
     getSettings(),
     getToday(user.sub),
     statusForToday(user.sub),
@@ -29,7 +31,16 @@ export default async function DashboardPage() {
     listNotifsForUser(user.sub),
     listReleases(),
     isGeoExempt(user.sub),
+    listPolls(),
+    allVotes(),
   ]);
+
+  // Open polls this person can vote in, with their current choice.
+  const myVotes: Record<string, string> = {};
+  for (const v of votes) if (v.userId === user.sub) myVotes[v.pollId] = v.option;
+  const pollCards = polls
+    .filter((p) => pollIsOpen(p) && canSeePoll(p, { dept: user.dept }))
+    .map((p) => ({ id: p.id, question: p.question, options: p.options, closesAt: p.closesAt, myVote: myVotes[p.id] || "" }));
 
   // Releases is a Tech-department surface; other departments get their own module link.
   const canSeeReleases = isAdmin || user.dept === "Tech";
@@ -128,6 +139,8 @@ export default async function DashboardPage() {
   return (
     <>
       {!myAtt?.checkIn && !myLeave.onLeave && <CheckInPrompt wfhApproved={myLeave.wfhApproved} locationExempt={myExempt} />}
+
+      {pollCards.length > 0 && <DashboardPolls polls={pollCards} />}
 
       <div className="grid g-4 stagger" style={{ marginBottom: 18 }}>
         <Link href="/attendance" className={`stat ${attTint}`}>
