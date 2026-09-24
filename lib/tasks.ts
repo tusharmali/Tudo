@@ -65,6 +65,10 @@ export async function setStatus(id: string, status: string): Promise<void> {
   await updateWhere("Tasks", (r) => r.id === id, { status });
 }
 
+export async function setContent(id: string, content: string): Promise<void> {
+  await updateWhere("Tasks", (r) => r.id === id, { content: content.trim().slice(0, 300) });
+}
+
 export async function setUpdate(id: string, updateText: string): Promise<void> {
   await updateWhere("Tasks", (r) => r.id === id, { updateText });
 }

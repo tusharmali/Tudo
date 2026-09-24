@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireUser, requireManager, requireDayPlanEditor } from "@/lib/dal";
 import { isManager, canManageDept, manageDeptsOf } from "@/lib/roles";
-import { allRows, appendRows, genId, todayStr } from "@/lib/db";
-import { listByDate, toTree, createTask, setStatus, setUpdate, removeTask, setWeekTarget } from "@/lib/tasks";
+import { allRows, appendRows, deleteWhere, genId, todayStr } from "@/lib/db";
+import { listByDate, toTree, createTask, setStatus, setUpdate, setContent, removeTask, setWeekTarget } from "@/lib/tasks";
 import { setSetting } from "@/lib/settings";
 import { setWip } from "@/lib/wip";
 import { listUsers, getUserById } from "@/lib/users";
@@ -74,6 +74,46 @@ export async function createTaskAction(input: { userId: string; content: string;
     await logAction(admin, "Day plan", "Added task", input.content.trim().slice(0, 80));
     revalidatePath("/updates");
     return { ok: true, message: "Task added" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function setTaskContentAction(input: { id: string; content: string }): Promise<Res> {
+  try {
+    const admin = await requireDayPlanEditor();
+    const t = (await allRows("Tasks")).find((x) => x.id === input.id);
+    if (!t) return { ok: false, error: "Task not found." };
+    await assertDeptScope(admin, t.userId);
+    if (!input.content.trim()) return { ok: false, error: "Task can't be empty." };
+    await setContent(input.id, input.content);
+    await logAction(admin, "Day plan", "Edited a task", input.content.trim().slice(0, 80));
+    revalidatePath("/updates");
+    return { ok: true };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** Manager / day-plan editor: wipe the day's tasks (for the depts they manage). */
+export async function resetDayAction(input: { date: string }): Promise<Res> {
+  try {
+    const admin = await requireDayPlanEditor();
+    const date = asDate(input.date);
+    const all = await allRows("Tasks");
+    let victims = all.filter((t) => t.date === date);
+    if (!isManager(admin.role)) {
+      const managed = new Set(manageDeptsOf(admin));
+      const users = await listUsers();
+      const deptIds = new Set(users.filter((u) => managed.has(u.department)).map((u) => u.id));
+      victims = victims.filter((t) => deptIds.has(t.userId));
+    }
+    if (!victims.length) return { ok: false, error: "No tasks to reset for this day." };
+    const ids = new Set(victims.map((t) => t.id));
+    await deleteWhere("Tasks", (r) => ids.has(r.id));
+    await logAction(admin, "Day plan", "Reset the day plan", `${victims.length} tasks · ${date}`);
+    revalidatePath("/updates");
+    return { ok: true, message: `Cleared ${victims.length} task${victims.length === 1 ? "" : "s"}` };
   } catch (e) {
     return actionError(e);
   }

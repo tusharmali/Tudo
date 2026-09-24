@@ -178,6 +178,15 @@ select.inp { cursor: pointer; }
 .app.collapsed .nav-item.active::before { left: -8px; }
 .app.collapsed .side-user { justify-content: center; }
 .app.collapsed .side-user form { display: none; }
+/* day-plan inline-editable task rows */
+.dp-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.dp-bullet { font-weight: 700; font-size: 12.5px; color: var(--ink-soft); width: 12px; flex: none; text-align: center; }
+.dp-edit { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; padding: 6px 9px; border-radius: 7px; font-size: 12.8px; color: var(--ink); font-family: inherit; }
+.dp-edit.child { color: var(--ink-soft); }
+.dp-edit:hover { border-color: var(--line); background: var(--surface-2); }
+.dp-edit:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.dp-remove { flex: none; opacity: .5; transition: opacity .15s; }
+.dp-row:hover .dp-remove { opacity: 1; }
 /* dashboard quick-access tiles */
 .qa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
 .qa-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); color: var(--ink); text-decoration: none; transition: .15s; text-align: center; }

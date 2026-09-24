@@ -2,13 +2,45 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createTaskAction, deleteTaskAction, setWeekTargetAction, setFooterAction, copyPreviousDayPlanAction } from "@/app/actions/updates";
+import { createTaskAction, deleteTaskAction, setTaskContentAction, resetDayAction, setWeekTargetAction, setFooterAction, copyPreviousDayPlanAction } from "@/app/actions/updates";
 import { toast } from "@/components/Toaster";
 import CopyButton from "@/components/CopyButton";
 import { renderDayPlan } from "@/lib/format";
 import type { TaskNode } from "@/lib/tasks";
 
 export type BuilderUser = { id: string; name: string; handle: string; department: string };
+
+/** An inline-editable task row — type to change the text, saves on blur/Enter. */
+function EditableTask({ id, content, child = false, onSave, onRemove }: { id: string; content: string; child?: boolean; onSave: (id: string, content: string) => Promise<boolean>; onRemove: () => void }) {
+  const [v, setV] = useState(content);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => setV(content), [content]);
+
+  async function commit() {
+    const next = v.trim();
+    if (!next || next === content.trim()) { setV(content); return; }
+    setSaving(true);
+    const ok = await onSave(id, next);
+    if (!ok) setV(content);
+    setSaving(false);
+  }
+
+  return (
+    <div className="dp-row" style={{ paddingLeft: child ? 22 : 0 }}>
+      <span className="dp-bullet">{child ? "–" : "o"}</span>
+      <input
+        className={`dp-edit${child ? " child" : ""}`}
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+        disabled={saving}
+        aria-label="Task text"
+      />
+      <button className="chip dp-remove" onClick={onRemove} style={{ padding: "3px 9px", fontSize: 11 }} type="button">Remove</button>
+    </div>
+  );
+}
 
 export default function DayPlanBuilder({
   users,
@@ -38,6 +70,7 @@ export default function DayPlanBuilder({
   const [parentId, setParentId] = useState("");
   const [busy, setBusy] = useState(false);
   const [busyCopy, setBusyCopy] = useState(false);
+  const [busyReset, setBusyReset] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   // Keep the selected teammate inside the current department scope.
@@ -83,6 +116,19 @@ export default function DayPlanBuilder({
     const r = await deleteTaskAction({ id });
     if (r.ok) { toast(r.message || "Removed"); router.refresh(); } else toast(r.error || "Error");
   }
+  async function saveContent(id: string, content: string) {
+    const r = await setTaskContentAction({ id, content });
+    if (r.ok) router.refresh();
+    else toast(r.error || "Error");
+    return r.ok;
+  }
+  async function resetDay() {
+    if (!window.confirm("Clear ALL of today's tasks so you can start a fresh day plan? This can't be undone.")) return;
+    setBusyReset(true);
+    const r = await resetDayAction({ date });
+    if (r.ok) { toast(r.message || "Cleared"); router.refresh(); } else toast(r.error || "Error");
+    setBusyReset(false);
+  }
   async function saveWt() {
     const r = await setWeekTargetAction({ userId: sel, text: wt });
     if (r.ok) { toast(r.message || "Saved"); router.refresh(); } else toast(r.error || "Error");
@@ -106,9 +152,14 @@ export default function DayPlanBuilder({
         <div className="card pad">
           <div className="between" style={{ marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
             <h3 className="sec">Day Plan Builder</h3>
-            <button className="btn btn-ghost" style={{ padding: "7px 12px", fontSize: 12.5 }} onClick={copyPrev} disabled={busyCopy} type="button">
-              {busyCopy ? "Copying…" : "↻ Copy previous day"}
-            </button>
+            <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+              <button className="btn btn-ghost" style={{ padding: "7px 12px", fontSize: 12.5 }} onClick={copyPrev} disabled={busyCopy} type="button">
+                {busyCopy ? "Copying…" : "↻ Copy previous day"}
+              </button>
+              <button className="btn btn-ghost" style={{ padding: "7px 12px", fontSize: 12.5, color: "var(--bad)" }} onClick={resetDay} disabled={busyReset} type="button" title="Clear all of today's tasks and start fresh">
+                {busyReset ? "Resetting…" : "⟳ Reset today"}
+              </button>
+            </div>
           </div>
 
           <div className="grid g-2" style={{ gap: 10, marginBottom: 14 }}>
@@ -139,15 +190,9 @@ export default function DayPlanBuilder({
             {nodes.length === 0 && <p className="tiny faint" style={{ margin: 0 }}>No tasks yet for {selName}.</p>}
             {nodes.map((n) => (
               <div key={n.id}>
-                <div className="between" style={{ padding: "5px 0" }}>
-                  <div className="tiny"><b>o</b> {n.content}</div>
-                  <button className="chip" onClick={() => del(n.id)} style={{ padding: "3px 9px", fontSize: 11 }} type="button">Remove</button>
-                </div>
+                <EditableTask id={n.id} content={n.content} onSave={saveContent} onRemove={() => del(n.id)} />
                 {n.children.map((c) => (
-                  <div className="between" key={c.id} style={{ padding: "3px 0 3px 22px" }}>
-                    <div className="tiny muted">- {c.content}</div>
-                    <button className="chip" onClick={() => del(c.id)} style={{ padding: "3px 9px", fontSize: 11 }} type="button">Remove</button>
-                  </div>
+                  <EditableTask key={c.id} id={c.id} content={c.content} child onSave={saveContent} onRemove={() => del(c.id)} />
                 ))}
               </div>
             ))}
