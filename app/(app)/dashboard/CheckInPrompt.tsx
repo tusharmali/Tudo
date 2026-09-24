@@ -1,18 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { checkInAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
-import { getCurrentCoords, type Coords } from "@/lib/geo";
+import { getCurrentCoords, onLocationEnabled, type Coords } from "@/lib/geo";
 
 export default function CheckInPrompt({ wfhApproved, locationExempt = false }: { wfhApproved: boolean; locationExempt?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const busyRef = useRef(false);
+  const checkInRef = useRef<() => void>(() => {});
+
+  // If the user enables location in site settings after being blocked, retry
+  // automatically — no reload needed.
+  useEffect(() => onLocationEnabled(() => checkInRef.current()), []);
   if (hidden) return null;
 
   async function checkIn() {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       let coords: Coords = { lat: 0, lng: 0, accuracy: 0 };
@@ -32,8 +40,10 @@ export default function CheckInPrompt({ wfhApproved, locationExempt = false }: {
     } catch (e) {
       toast(e instanceof Error ? e.message : "Couldn't check in");
     }
+    busyRef.current = false;
     setBusy(false);
   }
+  checkInRef.current = checkIn;
 
   return (
     <div className="card pad checkin-prompt" style={{ marginBottom: 18 }}>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { checkInAction, checkOutAction } from "@/app/actions/attendance";
 import { toast } from "@/components/Toaster";
-import { getCurrentCoords, type Coords } from "@/lib/geo";
+import { getCurrentCoords, onLocationEnabled, type Coords } from "@/lib/geo";
 import type { AttRecord } from "@/lib/attendance";
 
 export default function CheckInCard({
@@ -20,10 +20,17 @@ export default function CheckInCard({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const checkInRef = useRef<() => void>(() => {});
   const checkedIn = !!today?.checkIn;
   const checkedOut = !!today?.checkOut;
 
+  // Auto-retry once the user allows location in site settings (no reload).
+  useEffect(() => onLocationEnabled(() => { if (!checkedIn) checkInRef.current(); }), [checkedIn]);
+
   async function doCheckIn() {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       let coords: Coords = { lat: 0, lng: 0, accuracy: 0 };
@@ -46,9 +53,11 @@ export default function CheckInCard({
     } catch (e) {
       toast(e instanceof Error ? e.message : "Couldn't check in");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
+  checkInRef.current = doCheckIn;
 
   async function doCheckOut() {
     setBusy(true);
