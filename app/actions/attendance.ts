@@ -12,6 +12,7 @@ import {
   setOffice,
   nowHM,
   isGeoExempt,
+  getOpenShift,
   clearCheckOut,
   removeAttendance,
 } from "@/lib/attendance";
@@ -36,6 +37,13 @@ export async function checkInAction(coords: Coords): Promise<Res> {
     const st = await statusForToday(u.sub, date);
     if (st.onLeave) {
       return { ok: false, error: "You're on approved leave today — attendance is locked." };
+    }
+
+    // Already on an open shift (including one that started last night)? Don't
+    // create a duplicate — just confirm they're in.
+    const openShift = await getOpenShift(u.sub);
+    if (openShift) {
+      return { ok: true, message: `You're already checked in since ${openShift.checkIn}` };
     }
 
     const cfg = await getAttConfig();
@@ -94,9 +102,11 @@ export async function checkOutAction(): Promise<Res> {
   try {
     const u = await requireUser();
     const time = nowHM();
-    await recordCheckOut(u.sub, todayStr(), time);
+    const ok = await recordCheckOut(u.sub, time);
+    if (!ok) return { ok: false, error: "You don't have an open shift to check out of." };
     await logAction(u, "Attendance", "Checked out", time);
     revalidatePath("/attendance");
+    revalidatePath("/dashboard");
     return { ok: true, message: `Checked out at ${time}` };
   } catch (e) {
     return actionError(e);

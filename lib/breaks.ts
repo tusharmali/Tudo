@@ -31,13 +31,18 @@ async function all(): Promise<Break[]> {
   return (await allRows("Breaks")) as unknown as Break[];
 }
 
-export async function openBreakFor(userId: string, date = todayStr()): Promise<Break | null> {
-  return (await all()).find((b) => b.userId === userId && b.date === date && !b.end) ?? null;
+/** The user's currently-open break (no end), if any — regardless of which day it
+ *  started on, so a break running across midnight can still be ended. */
+export async function openBreakFor(userId: string): Promise<Break | null> {
+  const open = (await all())
+    .filter((b) => b.userId === userId && !b.end)
+    .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  return open[0] ?? null;
 }
 
 export async function startBreak(userId: string, note = ""): Promise<{ ok: boolean; error?: string }> {
   const date = todayStr();
-  if (await openBreakFor(userId, date)) return { ok: false, error: "You're already on a break." };
+  if (await openBreakFor(userId)) return { ok: false, error: "You're already on a break." };
   await appendRow("Breaks", {
     id: genId("brk"),
     userId,

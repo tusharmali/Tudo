@@ -1,9 +1,9 @@
 import { getCurrentUser } from "@/lib/auth";
 import { isManager } from "@/lib/roles";
 import { listUsers, usersMap } from "@/lib/users";
-import { getAttConfig, officeIsSet, getToday, listByDate, isGeoExempt, type AttRecord } from "@/lib/attendance";
+import { getAttConfig, officeIsSet, getCurrentShift, listActiveForToday, isGeoExempt, type AttRecord } from "@/lib/attendance";
 import { statusForToday, listForUser, listPending, listApprovedForDate, listUpcomingApproved } from "@/lib/leave";
-import { listBreaks } from "@/lib/breaks";
+import { listBreaks, openBreakFor } from "@/lib/breaks";
 import type { User } from "@/lib/types";
 import { todayStr } from "@/lib/db";
 import Avatar, { avatarSrc } from "@/components/Avatar";
@@ -21,15 +21,15 @@ export default async function AttendancePage() {
   if (!user) return null;
   const isAdmin = isManager(user.role);
 
-  const [cfg, myToday, myStatus, myLeaves, myExempt, myBreaks] = await Promise.all([
+  const [cfg, myToday, myStatus, myLeaves, myExempt, myBreaks, openBreak] = await Promise.all([
     getAttConfig(),
-    getToday(user.sub),
+    getCurrentShift(user.sub),
     statusForToday(user.sub),
     listForUser(user.sub),
     isGeoExempt(user.sub),
     listBreaks({ date: todayStr(), userIds: [user.sub] }),
+    openBreakFor(user.sub),
   ]);
-  const openBreak = myBreaks.find((b) => !b.end) || null;
   const breakMinToday = myBreaks.filter((b) => b.end).reduce((s, b) => s + Number(b.durationMin || 0), 0);
 
   type ReqRow = { id: string; userName: string; type: string; half: string; fromDate: string; toDate: string; reason: string };
@@ -40,7 +40,7 @@ export default async function AttendancePage() {
   if (isAdmin) {
     const [users, today, approved, pend, upcoming, umap] = await Promise.all([
       listUsers(),
-      listByDate(),
+      listActiveForToday(),
       listApprovedForDate(),
       listPending(),
       listUpcomingApproved(),
@@ -151,7 +151,7 @@ export default async function AttendancePage() {
                       <td className="num">{rec?.checkOut || "—"}</td>
                       <td className="tiny muted">{u.department || "—"}</td>
                       <td>
-                        <AttendanceEditCell userId={u.id} name={u.name} date={todayStr()} hasCheckIn={!!rec?.checkIn} hasCheckOut={!!rec?.checkOut} />
+                        <AttendanceEditCell userId={u.id} name={u.name} date={rec?.date || todayStr()} hasCheckIn={!!rec?.checkIn} hasCheckOut={!!rec?.checkOut} />
                       </td>
                     </tr>
                   ))}

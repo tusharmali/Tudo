@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { isManager, canPlan, manageDeptsOf } from "@/lib/roles";
 import { listUsers } from "@/lib/users";
-import { listByDate, nowHM } from "@/lib/attendance";
+import { listActiveForToday, nowHM } from "@/lib/attendance";
 import { listBreaks, breakDiffMin } from "@/lib/breaks";
 import { listUpcomingApproved, listPending, leaveLabel } from "@/lib/leave";
 import { todayStr } from "@/lib/db";
@@ -24,7 +24,7 @@ export default async function TeamLogPage() {
 
   const [users, todayAtt, weekBreaks, approved, pending] = await Promise.all([
     listUsers(),
-    listByDate(date),
+    listActiveForToday(),
     listBreaks({ sinceDate: since }),
     listUpcomingApproved(),
     listPending(),

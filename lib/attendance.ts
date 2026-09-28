@@ -75,6 +75,67 @@ export async function listByDate(date = todayStr()): Promise<AttRecord[]> {
   return rows.filter((x) => x.date === date) as unknown as AttRecord[];
 }
 
+// ---------- night shifts crossing midnight ----------
+// An attendance row is keyed by the day the shift STARTED. A night worker who
+// checks in at 22:00 and out at 06:00 has one row dated the first day. After
+// midnight `todayStr()` rolls over, so "today's row" lookups would miss the
+// open shift — breaking check-out and the current-status view. These helpers
+// resolve the shift the user is actually IN, even when it began yesterday.
+const MAX_SHIFT_HOURS = 16; // an open shift older than this is a forgotten check-out, not a live overnight shift
+
+/** A calendar date (YYYY-MM-DD, workspace tz) offset from today by whole days. */
+export function shiftDate(offsetDays: number, tz = "Asia/Kolkata"): string {
+  const at = new Date(Date.now() + offsetDays * 86400000);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(at);
+}
+
+/** Hours since a record's check-in, correct across midnight. India is a fixed
+ *  +05:30 offset (no DST), so the IST wall-clock time anchors directly. */
+export function hoursSinceCheckIn(rec: AttRecord): number {
+  if (!rec.checkIn) return Infinity;
+  const started = new Date(`${rec.date}T${rec.checkIn}:00+05:30`).getTime();
+  if (!Number.isFinite(started)) return Infinity;
+  return (Date.now() - started) / 3600000;
+}
+
+/** The shift the user is currently IN — a check-in with no check-out — even when
+ *  it began yesterday and ran past midnight. Bounded to MAX_SHIFT_HOURS so an old
+ *  forgotten check-out isn't mistaken for a live shift. */
+export async function getOpenShift(userId: string): Promise<AttRecord | null> {
+  const today = todayStr();
+  const yest = shiftDate(-1);
+  const rows = (await allRows("Attendance")) as unknown as AttRecord[];
+  const open = rows
+    .filter((r) => r.userId === userId && (r.date === today || r.date === yest) && r.checkIn && !r.checkOut)
+    .sort((a, b) => (b.date + b.checkIn).localeCompare(a.date + a.checkIn));
+  const cand = open[0];
+  return cand && hoursSinceCheckIn(cand) <= MAX_SHIFT_HOURS ? cand : null;
+}
+
+/** The record representing the user's status right now: today's row if they have
+ *  one, otherwise an overnight shift still open from yesterday. Use this (not
+ *  getToday) wherever "am I checked in?" is asked, so shifts that cross midnight
+ *  keep working. */
+export async function getCurrentShift(userId: string): Promise<AttRecord | null> {
+  const today = await getToday(userId);
+  if (today) return today;
+  return getOpenShift(userId);
+}
+
+/** Rows that count as "active today" for a roster: every row dated today, plus
+ *  still-open overnight shifts carried from yesterday (one per user, today wins). */
+export async function listActiveForToday(): Promise<AttRecord[]> {
+  const today = todayStr();
+  const yest = shiftDate(-1);
+  const rows = (await allRows("Attendance")) as unknown as AttRecord[];
+  const todays = rows.filter((r) => r.date === today);
+  const seen = new Set(todays.map((r) => r.userId));
+  const carried = rows.filter(
+    (r) => r.date === yest && r.checkIn && !r.checkOut && !seen.has(r.userId) && hoursSinceCheckIn(r) <= MAX_SHIFT_HOURS,
+  );
+  return [...todays, ...carried];
+}
+
 export async function recordCheckIn(input: {
   userId: string;
   date: string;
@@ -113,8 +174,13 @@ export async function recordCheckIn(input: {
   }
 }
 
-export async function recordCheckOut(userId: string, date: string, time: string): Promise<void> {
-  await updateWhere("Attendance", (r) => r.userId === userId && r.date === date, { checkOut: time });
+/** Close the user's open shift (today's, or an overnight one from yesterday).
+ *  Returns false when there's nothing open to check out of. */
+export async function recordCheckOut(userId: string, time: string): Promise<boolean> {
+  const rec = await getCurrentShift(userId);
+  if (!rec || !rec.checkIn || rec.checkOut) return false;
+  await updateWhere("Attendance", (r) => r.id === rec.id, { checkOut: time });
+  return true;
 }
 
 /** Manager fix: clear a mistaken check-out (keeps the check-in). */

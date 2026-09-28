@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal";
 import { startBreak, endBreak } from "@/lib/breaks";
-import { getToday } from "@/lib/attendance";
+import { getCurrentShift } from "@/lib/attendance";
 import { logAction } from "@/lib/audit";
 import { actionError, type Res } from "@/lib/action";
 
@@ -11,7 +11,7 @@ import { actionError, type Res } from "@/lib/action";
 export async function startBreakAction(input?: { note?: string }): Promise<Res> {
   try {
     const u = await requireUser();
-    const att = await getToday(u.sub);
+    const att = await getCurrentShift(u.sub);
     if (!att?.checkIn) return { ok: false, error: "Check in first to start a break." };
     if (att.checkOut) return { ok: false, error: "You've already checked out for the day." };
     const r = await startBreak(u.sub, input?.note || "");
