@@ -9,6 +9,9 @@ import { setSetting } from "@/lib/settings";
 import { setWip } from "@/lib/wip";
 import { listUsers, getUserById } from "@/lib/users";
 import { generateOverall } from "@/lib/ai";
+import { create as createNotification } from "@/lib/notifications";
+import { isNotifyEnabled } from "@/lib/notify-prefs";
+import { sendToUsers } from "@/lib/push";
 import { actionError, type Res } from "@/lib/action";
 import { logAction } from "@/lib/audit";
 import type { SessionUser } from "@/lib/types";
@@ -163,6 +166,36 @@ export async function setWeekTargetAction(input: { userId: string; text: string 
     await setWeekTarget(input.userId, input.text);
     revalidatePath("/updates");
     return { ok: true, message: "Week target saved" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** Ping a department (or everyone) that their day plan is ready. Managers may
+ *  target anyone; a dept admin only their own department(s). */
+export async function notifyDayPlanAction(input: { dept: string; message?: string }): Promise<Res> {
+  try {
+    const me = await requireDayPlanEditor();
+    const dept = (input.dept || "all").trim();
+    const users = await listUsers();
+    let recipients = users.filter((u) => (u.status || "active") !== "suspended" && (dept === "all" || u.department === dept));
+    // A dept admin is confined to their own department(s), whatever scope they pick.
+    if (!isManager(me.role)) {
+      const mine = new Set(manageDeptsOf(me));
+      if (dept !== "all" && !mine.has(dept)) return { ok: false, error: "You can only notify your department." };
+      recipients = recipients.filter((u) => mine.has(u.department));
+    }
+    if (!recipients.length) return { ok: false, error: "No one to notify in that scope." };
+
+    const title = "📋 Day plan posted";
+    const body = (input.message || "").trim().slice(0, 160) || "Your day plan is ready — check your tasks for today.";
+    if (await isNotifyEnabled("dayplan.posted")) {
+      const ids = recipients.map((u) => u.id);
+      await createNotification(title, body, ids.join(","), me.sub, "/updates");
+      await sendToUsers(ids, { title, body, url: "/updates" }).catch(() => {});
+    }
+    await logAction(me, "Day plan", "Notified team", `${dept === "all" ? "Everyone" : dept} · ${recipients.length}`);
+    return { ok: true, message: `Notified ${recipients.length} ${dept === "all" ? "" : dept + " "}teammate${recipients.length === 1 ? "" : "s"}` };
   } catch (e) {
     return actionError(e);
   }

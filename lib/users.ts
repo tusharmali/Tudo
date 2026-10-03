@@ -24,6 +24,8 @@ function rowToUser(r: Row): User {
     phone: r.phone || "",
     status: r.status || "active",
     remote: r.remote || "",
+    shiftIn: r.shiftIn || "",
+    shiftOut: r.shiftOut || "",
   };
 }
 
@@ -163,6 +165,36 @@ export async function setDepartmentRemote(department: string, remote: boolean): 
   const dept = department.trim();
   if (!dept) return 0;
   return updateWhere("Users", (r) => (r.department || "") === dept, { remote: remote ? "true" : "" });
+}
+
+/** Normalize a time to zero-padded HH:MM, or "" if blank / invalid. */
+export function normalizeHM(s: string): string {
+  const m = (s || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return "";
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return "";
+  return `${String(h).padStart(2, "0")}:${m[2]}`;
+}
+
+/** Manager / dept-admin: set a user's expected sign-in / sign-out times (for
+ *  reminders). Either may be "" to clear it. */
+export async function setUserShift(userId: string, shiftIn: string, shiftOut: string): Promise<void> {
+  const changed = await updateWhere("Users", (r) => r.id === userId, {
+    shiftIn: normalizeHM(shiftIn),
+    shiftOut: normalizeHM(shiftOut),
+  });
+  if (!changed) throw new Error("User not found.");
+}
+
+/** Manager: set the same shift times for a whole department. Returns the count. */
+export async function setDepartmentShift(department: string, shiftIn: string, shiftOut: string): Promise<number> {
+  const dept = department.trim();
+  if (!dept) return 0;
+  return updateWhere("Users", (r) => (r.department || "") === dept, {
+    shiftIn: normalizeHM(shiftIn),
+    shiftOut: normalizeHM(shiftOut),
+  });
 }
 
 /** Manager: change a user's login email (must be unique). */

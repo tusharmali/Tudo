@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireManager, requireAdmin } from "@/lib/dal";
-import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail, setUserManageDepts, setUserRemote, setDepartmentRemote } from "@/lib/users";
+import { requireUser, requireManager, requireAdmin } from "@/lib/dal";
+import { createUser, getUserById, setUserStatus, setUserRole, setUserDepartment, setUserEmail, setUserManageDepts, setUserRemote, setDepartmentRemote, setUserShift, setDepartmentShift } from "@/lib/users";
 import { setTwofaEnabled } from "@/lib/twofa";
 import { setGeoExempt } from "@/lib/attendance";
 import { assertCanModify } from "@/lib/owner";
 import { logAction } from "@/lib/audit";
-import { roleLabel } from "@/lib/roles";
+import { roleLabel, isManager, canManageDept } from "@/lib/roles";
 import { notifyIfEnabled } from "@/lib/notifications";
 import { actionError, type Res } from "@/lib/action";
 import type { Role } from "@/lib/types";
@@ -152,6 +152,45 @@ export async function setDepartmentRemoteAction(input: { department: string; rem
     revalidatePath("/people");
     revalidatePath("/attendance");
     return { ok: true, message: n === 0 ? `No members in ${dept}` : input.remote ? `${n} ${dept} member${n === 1 ? "" : "s"} set to remote (WFH)` : `${n} ${dept} member${n === 1 ? "" : "s"} back to office check-in` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** Manager (any dept) or a department admin (their own dept) sets a member's
+ *  expected sign-in / sign-out times, used only for reminders. */
+export async function setUserShiftAction(input: { userId: string; shiftIn: string; shiftOut: string }): Promise<Res> {
+  try {
+    const me = await requireUser();
+    const target = await getUserById(input.userId);
+    if (!target) return { ok: false, error: "User not found." };
+    if (!isManager(me.role) && !canManageDept(me, target.department)) {
+      return { ok: false, error: "You can only set shift times for your department." };
+    }
+    await setUserShift(input.userId, input.shiftIn, input.shiftOut);
+    await logAction(me, "People", "Set shift times", `${target.name}: ${input.shiftIn || "—"}–${input.shiftOut || "—"}`);
+    revalidatePath("/team");
+    revalidatePath("/people");
+    return { ok: true, message: `Shift times saved for ${target.name}` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** Manager or department admin: set the same shift times for a whole department. */
+export async function setDepartmentShiftAction(input: { department: string; shiftIn: string; shiftOut: string }): Promise<Res> {
+  try {
+    const me = await requireUser();
+    const dept = (input.department || "").trim();
+    if (!dept) return { ok: false, error: "Pick a department." };
+    if (!isManager(me.role) && !canManageDept(me, dept)) {
+      return { ok: false, error: "You can only set shift times for your department." };
+    }
+    const n = await setDepartmentShift(dept, input.shiftIn, input.shiftOut);
+    await logAction(me, "People", "Set department shift times", `${dept} · ${n} member${n === 1 ? "" : "s"} · ${input.shiftIn || "—"}–${input.shiftOut || "—"}`);
+    revalidatePath("/team");
+    revalidatePath("/people");
+    return { ok: true, message: n === 0 ? `No members in ${dept}` : `Shift times set for ${n} ${dept} member${n === 1 ? "" : "s"}` };
   } catch (e) {
     return actionError(e);
   }

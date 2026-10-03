@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createTaskAction, deleteTaskAction, setTaskContentAction, reorderTasksAction,
-  resetDayAction, setWeekTargetAction, setFooterAction, copyPreviousDayPlanAction,
+  resetDayAction, setWeekTargetAction, setFooterAction, copyPreviousDayPlanAction, notifyDayPlanAction,
 } from "@/app/actions/updates";
 import { toast } from "@/components/Toaster";
 import CopyButton from "@/components/CopyButton";
@@ -84,6 +84,7 @@ export default function DayPlanBuilder({
   const [parentId, setParentId] = useState("");
   const [busyCopy, setBusyCopy] = useState(false);
   const [busyReset, setBusyReset] = useState(false);
+  const [busyNotify, setBusyNotify] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   // Local, optimistic copy of the tasks so edits appear instantly. Re-seeded from
@@ -227,6 +228,14 @@ export default function DayPlanBuilder({
     const r = await setFooterAction({ text: ft });
     if (r.ok) toast(r.message || "Saved"); else toast(r.error || "Error");
   }
+  async function notifyTeam() {
+    const who = dept === "all" ? "everyone" : `the ${dept} team`;
+    if (!window.confirm(`Send a “day plan posted” notification to ${who}?`)) return;
+    setBusyNotify(true);
+    const r = await notifyDayPlanAction({ dept });
+    if (r.ok) toast(r.message || "Notified"); else toast(r.error || "Error");
+    setBusyNotify(false);
+  }
   async function copyPrev() {
     const hasTasks = Object.values(byUser).some((arr) => arr.length > 0);
     if (hasTasks && !window.confirm("This day already has tasks. Copy the previous day's plan on top anyway?")) return;
@@ -248,6 +257,9 @@ export default function DayPlanBuilder({
           <div className="between" style={{ marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
             <h3 className="sec">Day Plan Builder</h3>
             <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+              <button className="btn btn-primary" style={{ padding: "7px 12px", fontSize: 12.5 }} onClick={notifyTeam} disabled={busyNotify} type="button" title={`Notify ${dept === "all" ? "everyone" : dept} that the day plan is ready`}>
+                {busyNotify ? "Sending…" : "🔔 Notify team"}
+              </button>
               <button className="btn btn-ghost" style={{ padding: "7px 12px", fontSize: 12.5 }} onClick={copyPrev} disabled={busyCopy} type="button">
                 {busyCopy ? "Copying…" : "↻ Copy previous day"}
               </button>

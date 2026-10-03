@@ -15,6 +15,8 @@ export interface NotifyAction {
 export const NOTIFY_ACTIONS: NotifyAction[] = [
   { key: "attendance.fix", module: "Attendance", label: "A manager fixes my attendance (undo check-out / clear the day)" },
   { key: "attendance.leave", module: "Attendance", label: "My leave / WFH request is approved, rejected or revoked" },
+  { key: "attendance.reminder", module: "Attendance", label: "Shift reminders — 30 min before my sign-in and a buzzer at sign-out" },
+  { key: "dayplan.posted", module: "Day plan", label: "My day plan is posted / updated" },
   { key: "people.role", module: "People", label: "My role is changed" },
   { key: "people.department", module: "People", label: "My department is changed" },
   { key: "people.reactivate", module: "People", label: "My account is reactivated" },

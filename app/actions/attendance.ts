@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, requireManager } from "@/lib/dal";
+import { isManager, canManageDept } from "@/lib/roles";
 import { todayStr } from "@/lib/db";
 import {
   getAttConfig,
@@ -136,9 +137,16 @@ export async function requestLeaveAction(input: {
 
 export async function decideLeaveAction(input: { id: string; decision: "approved" | "rejected" }): Promise<Res> {
   try {
-    const admin = await requireManager();
+    const admin = await requireUser();
     const req = await getLeave(input.id);
     if (!req) return { ok: false, error: "Request not found." };
+    // Managers decide for anyone; a department admin only for their own team.
+    if (!isManager(admin.role)) {
+      const target = await getUserById(req.userId);
+      if (!target || !canManageDept(admin, target.department)) {
+        return { ok: false, error: "You can only decide leave for your department." };
+      }
+    }
     const wasApproved = req.status === "approved";
     await decide(input.id, input.decision, admin.sub);
 

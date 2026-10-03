@@ -13,6 +13,8 @@ export interface User {
   phone?: string;
   status?: string;
   remote?: string; // "true" = remote/WFH worker: checks in from anywhere, marked WFH
+  shiftIn?: string; // HH:MM expected sign-in time (for reminders), "" = unset
+  shiftOut?: string; // HH:MM expected sign-out time (for reminders), "" = unset
 }
 
 /** The compact user object stored inside the signed session cookie. */

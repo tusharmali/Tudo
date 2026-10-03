@@ -9,6 +9,7 @@ import { listUpcomingApproved, listPending, leaveLabel } from "@/lib/leave";
 import { todayStr } from "@/lib/db";
 import Avatar, { avatarSrc } from "@/components/Avatar";
 import ExportBreaksButton from "./ExportBreaksButton";
+import { LeaveDecide, ShiftPanel } from "./TeamControls";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,16 @@ export default async function TeamLogPage() {
 
   const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
   const scopeLabel = manager ? "All departments" : myDepts.join(" · ") || "Your department";
+
+  // Shift-time editor data (active members in scope) + the departments the
+  // viewer may bulk-set (managers: all present; dept admins: their own).
+  const shiftMembers = scopeUsers
+    .filter((u) => (u.status || "active") !== "suspended")
+    .map((u) => ({ id: u.id, name: u.name, dept: u.department || "—", shiftIn: u.shiftIn || "", shiftOut: u.shiftOut || "" }))
+    .sort((a, b) => a.dept.localeCompare(b.dept) || a.name.localeCompare(b.name));
+  const scopeDepts = manager
+    ? [...new Set(scopeUsers.map((u) => u.department).filter(Boolean))].sort()
+    : myDepts;
 
   return (
     <>
@@ -213,7 +224,16 @@ export default async function TeamLogPage() {
                   <td><span className="pill p-sky">{l.label}</span></td>
                   <td className="tiny">{l.from === l.to ? l.from : `${l.from} → ${l.to}`}</td>
                   <td className="tiny muted">{l.reason || "—"}</td>
-                  <td>{l.pending ? <span className="pill p-warn">Pending</span> : <span className="pill p-good">Approved</span>}</td>
+                  <td>
+                    {l.pending ? (
+                      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                        <span className="pill p-warn">Pending</span>
+                        <LeaveDecide id={l.id} />
+                      </div>
+                    ) : (
+                      <span className="pill p-good">Approved</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {leaveRows.length === 0 && (
@@ -222,6 +242,18 @@ export default async function TeamLogPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Shift times (reminder anchors) */}
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div className="between" style={{ padding: "18px 22px 6px", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <h3 className="sec" style={{ margin: 0 }}>Shift times</h3>
+            <p className="muted tiny" style={{ margin: "3px 0 0" }}>Sign-in / sign-out times drive the reminders — a nudge 30&nbsp;min before sign-in and a buzzer at sign-out. They don&apos;t fence check-in.</p>
+          </div>
+          <span className="pill p-peri">{scopeLabel}</span>
+        </div>
+        <ShiftPanel members={shiftMembers} departments={scopeDepts} />
       </div>
 
       {/* History */}
