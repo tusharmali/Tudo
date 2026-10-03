@@ -41,12 +41,13 @@ export async function createTask(input: {
   content: string;
   parentId?: string;
   createdBy: string;
-}): Promise<void> {
+}): Promise<string> {
   const siblings = (await listByDate(input.date)).filter(
     (t) => t.userId === input.userId && (t.parentId || "") === (input.parentId || ""),
   );
+  const id = genId("tk");
   await appendRow("Tasks", {
-    id: genId("tk"),
+    id,
     userId: input.userId,
     date: input.date,
     parentId: input.parentId || "",
@@ -59,6 +60,12 @@ export async function createTask(input: {
     createdBy: input.createdBy,
     createdAt: new Date().toISOString(),
   });
+  return id;
+}
+
+/** Persist a new sequence for a set of sibling tasks (order = position). */
+export async function reorderTasks(ids: string[]): Promise<void> {
+  await Promise.all(ids.map((id, i) => updateWhere("Tasks", (r) => r.id === id, { order: String(i) })));
 }
 
 export async function setStatus(id: string, status: string): Promise<void> {

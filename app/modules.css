@@ -188,6 +188,14 @@ select.inp { cursor: pointer; }
 .dp-edit:focus { outline: none; border-color: var(--accent); background: var(--surface); }
 .dp-remove { flex: none; opacity: .5; transition: opacity .15s; }
 .dp-row:hover .dp-remove { opacity: 1; }
+.dp-drag { flex: none; width: 16px; text-align: center; cursor: grab; color: var(--ink-faint); font-size: 13px; line-height: 1; opacity: .45; transition: opacity .15s; user-select: none; }
+.dp-row:hover .dp-drag { opacity: 1; }
+.dp-drag:active { cursor: grabbing; }
+.dp-row.dragging { opacity: .45; background: var(--accent-wash); border-radius: 7px; }
+.dp-mini { flex: none; width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface-2); color: var(--accent-ink); font-size: 14px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .15s, background .15s; }
+.dp-row:hover .dp-mini { opacity: 1; }
+.dp-mini:hover { background: var(--accent-wash); border-color: var(--accent); }
+.linklike { background: none; border: 0; padding: 0; color: var(--accent-ink); font: inherit; cursor: pointer; text-decoration: underline; }
 /* dashboard quick-access tiles */
 .qa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
 .qa-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); color: var(--ink); text-decoration: none; transition: .15s; text-align: center; }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser, requireManager, requireDayPlanEditor } from "@/lib/dal";
 import { isManager, canManageDept, manageDeptsOf } from "@/lib/roles";
 import { allRows, appendRows, deleteWhere, genId, todayStr } from "@/lib/db";
-import { listByDate, toTree, createTask, setStatus, setUpdate, setContent, removeTask, setWeekTarget } from "@/lib/tasks";
+import { listByDate, toTree, createTask, setStatus, setUpdate, setContent, removeTask, setWeekTarget, reorderTasks } from "@/lib/tasks";
 import { setSetting } from "@/lib/settings";
 import { setWip } from "@/lib/wip";
 import { listUsers, getUserById } from "@/lib/users";
@@ -59,12 +59,12 @@ export async function saveTaskUpdateAction(input: { id: string; updateText: stri
   }
 }
 
-export async function createTaskAction(input: { userId: string; content: string; parentId?: string; date: string }): Promise<Res> {
+export async function createTaskAction(input: { userId: string; content: string; parentId?: string; date: string }): Promise<Res<string>> {
   try {
     const admin = await requireDayPlanEditor();
     await assertDeptScope(admin, input.userId);
     if (!input.content.trim()) return { ok: false, error: "Type the task first." };
-    await createTask({
+    const id = await createTask({
       userId: input.userId,
       date: asDate(input.date),
       content: input.content.trim(),
@@ -73,7 +73,30 @@ export async function createTaskAction(input: { userId: string; content: string;
     });
     await logAction(admin, "Day plan", "Added task", input.content.trim().slice(0, 80));
     revalidatePath("/updates");
-    return { ok: true, message: "Task added" };
+    return { ok: true, data: id, message: "Task added" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** Reorder a set of sibling tasks (drag-and-drop). `ids` is the new order. */
+export async function reorderTasksAction(input: { ids: string[] }): Promise<Res> {
+  try {
+    const admin = await requireDayPlanEditor();
+    const ids = (input.ids || []).filter(Boolean);
+    if (ids.length < 2) return { ok: true };
+    const tasks = await allRows("Tasks");
+    const first = tasks.find((t) => t.id === ids[0]);
+    if (!first) return { ok: false, error: "Tasks not found." };
+    await assertDeptScope(admin, first.userId);
+    // Only reorder rows that belong to the same user + sibling group as the first.
+    const group = new Set(
+      tasks.filter((t) => t.userId === first.userId && (t.parentId || "") === (first.parentId || "")).map((t) => t.id),
+    );
+    const clean = ids.filter((id) => group.has(id));
+    await reorderTasks(clean);
+    revalidatePath("/updates");
+    return { ok: true };
   } catch (e) {
     return actionError(e);
   }
