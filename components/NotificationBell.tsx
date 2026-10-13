@@ -53,12 +53,17 @@ export default function NotificationBell() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 10000);
+    // Poll only while the tab is visible (a hidden tab left open all day was
+    // burning serverless invocations); catch up the moment it's shown again.
+    const t = setInterval(() => { if (document.visibilityState === "visible") load(); }, 30000);
     const onRefresh = () => load();
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
     window.addEventListener("tudo:notify-refresh", onRefresh);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(t);
       window.removeEventListener("tudo:notify-refresh", onRefresh);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [load]);
 

@@ -280,8 +280,14 @@ export default function ChatClient({
 
   useEffect(() => {
     if (!activeId) return;
-    const t = setInterval(fetchMessages, 4000);
-    return () => clearInterval(t);
+    // Poll only while the tab is visible; catch up as soon as it's shown again.
+    const t = setInterval(() => { if (document.visibilityState === "visible") fetchMessages(); }, 4000);
+    const onVisible = () => { if (document.visibilityState === "visible") fetchMessages(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [activeId, fetchMessages]);
 
   const refreshOverview = useCallback(async () => {
@@ -301,8 +307,13 @@ export default function ChatClient({
   }, [activeId]);
 
   useEffect(() => {
-    const t = setInterval(refreshOverview, 7000);
-    return () => clearInterval(t);
+    const t = setInterval(() => { if (document.visibilityState === "visible") refreshOverview(); }, 15000);
+    const onVisible = () => { if (document.visibilityState === "visible") refreshOverview(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [refreshOverview]);
 
   const messages = useMemo(() => {
