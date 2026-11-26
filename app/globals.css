@@ -316,3 +316,51 @@ button.mnav { border: 0; cursor: pointer; font-family: inherit; }
 /* ---------- Mobile nav active pill + sheet swatches ---------- */
 @media (max-width: 900px) { .mnav.active { background: var(--accent-wash); } }
 .sheet-appear { display: flex; align-items: center; gap: 9px; padding: 10px 12px; flex-wrap: wrap; }
+
+/* ============================================================
+   Snappiness pass — make taps register instantly and loads feel
+   seamless. Perceived speed > raw speed: acknowledge every touch,
+   remove mobile tap lag, and wash content in instead of popping it.
+   ============================================================ */
+
+/* Kill the ~300ms mobile tap delay and the grey tap flash on anything
+   interactive, so a press feels immediate like a native app. */
+a, button, label, summary, [role="button"],
+.nav-item, .mnav, .qa-tile, .stat, .card.hover, .swatch, .pill, .seg3 button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { overscroll-behavior-y: none; }
+.main, .canvas, .sheet, .appear-pop { -webkit-overflow-scrolling: touch; }
+
+/* Tactile press — a tiny scale-down confirms the hit instantly. */
+.qa-tile, .stat { transition: transform .16s cubic-bezier(.2,.9,.25,1), box-shadow .2s, background .2s; }
+.qa-tile:active, .stat:active { transform: scale(.972); }
+.nav-item:active, .mnav:active, .icon-btn:active { transform: scale(.95); }
+.card.hover:active { transform: translateY(-1px) scale(.995); }
+
+/* Route wash-in — replays on real navigation (RouteFade is keyed by path),
+   never on the background refresh. Opacity-only so it doesn't fight the
+   per-page .stagger motion. */
+.route-fade { animation: route-in .18s ease both; }
+@keyframes route-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Top navigation progress bar — appears the instant a nav link is tapped and
+   clears when the new route commits. Indeterminate slide = "working on it". */
+.nav-progress { position: fixed; top: 0; left: 0; right: 0; height: 2.5px; z-index: 200; opacity: 0; pointer-events: none; overflow: hidden; transition: opacity .15s; }
+.nav-progress.on { opacity: 1; }
+.nav-progress.on::before {
+  content: ""; position: absolute; top: 0; height: 100%; width: 42%; border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, transparent, var(--accent) 40%, var(--accent-ink));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 65%, transparent);
+  animation: nav-slide 1.05s cubic-bezier(.4,0,.2,1) infinite;
+}
+@keyframes nav-slide { 0% { left: -45%; } 100% { left: 102%; } }
+
+/* Keep motion-sensitive users comfortable: the global reduced-motion block
+   already clamps durations; make sure the bar still shows as a static cue. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress.on::before { animation: none; left: 0; width: 100%; opacity: .6; }
+  .route-fade { animation: none; }
+}

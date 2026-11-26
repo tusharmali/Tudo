@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "@/components/NotificationBell";
 import Appearance from "@/components/Appearance";
+import RouteFade from "@/components/RouteFade";
 import PwaPrompts from "@/components/PwaPrompts";
 import Avatar, { avatarSrc } from "@/components/Avatar";
 import { isManager, canPlan, roleLabel } from "@/lib/roles";
@@ -112,6 +113,9 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   const [collapsed, setCollapsed] = useState(false);
   const [favs, setFavs] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
+  // The route we're navigating TO — set the instant a nav link is tapped so the
+  // target lights up and a progress bar appears before the server responds.
+  const [navTo, setNavTo] = useState<string | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
 
   // Keep every screen live, but cheaply: soft-refresh server data every 2 min and
@@ -150,14 +154,29 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   }
 
   // The main panel is the scroll container — reset it to the top on navigation,
-  // and always close the mobile "More" sheet when the route changes.
+  // close the mobile "More" sheet, and clear the pending-nav indicator once the
+  // route has actually committed.
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
     setMoreOpen(false);
+    setNavTo(null);
   }, [pathname]);
+
+  // Safety net: if a navigation is cancelled (e.g. same-page, blocked), don't
+  // leave the progress bar stuck on.
+  useEffect(() => {
+    if (!navTo) return;
+    const t = setTimeout(() => setNavTo(null), 6000);
+    return () => clearTimeout(t);
+  }, [navTo]);
 
   const first = user.name.split(" ")[0] || user.name;
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  // Optimistic: treat the just-clicked destination as active too, so feedback
+  // is instant even while the server renders the new page.
+  const navActive = (href: string) => isActive(href) || navTo === href;
+  const startNav = (href: string) => { if (href !== pathname) setNavTo(href); };
   // Managers see everything; employees see shared items + their department's items.
   const canSeeItem = (item: NavItem) =>
     (!item.ownerOnly || isOwner) &&
@@ -178,7 +197,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
 
   const renderItem = (item: NavItem) => (
     <div className="nav-row" key={item.href}>
-      <Link href={item.href} className={`nav-item${isActive(item.href) ? " active" : ""}`} title={item.label}>
+      <Link href={item.href} onClick={() => startNav(item.href)} className={`nav-item${navActive(item.href) ? " active" : ""}`} title={item.label}>
         {item.icon}
         <span>{item.label}</span>
         {item.badge && <span className="nav-badge">{item.badge}</span>}
@@ -191,6 +210,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
 
   return (
     <div className={`app${collapsed ? " collapsed" : ""}`}>
+      <div className={`nav-progress${navTo ? " on" : ""}`} aria-hidden />
       <aside className="sidebar">
         <div className="side-brand">
           <div className="brand-mark">T</div>
@@ -251,14 +271,14 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
           </div>
         </header>
 
-        <main className="canvas">{children}</main>
+        <main className="canvas"><RouteFade>{children}</RouteFade></main>
       </div>
 
       <PwaPrompts />
 
       <nav className="mobilenav">
         {MOBILE.map((item) => (
-          <Link key={item.href} href={item.href} className={`mnav${isActive(item.href) ? " active" : ""}`}>
+          <Link key={item.href} href={item.href} onClick={() => startNav(item.href)} className={`mnav${navActive(item.href) ? " active" : ""}`}>
             {item.icon}
             <span>{item.label}</span>
           </Link>
@@ -277,7 +297,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
               <div key={i}>
                 {sec.section && <div className="nav-label">{sec.section}</div>}
                 {sec.items.map((item) => (
-                  <Link key={item.href} href={item.href} className={`nav-item${isActive(item.href) ? " active" : ""}`}>
+                  <Link key={item.href} href={item.href} onClick={() => startNav(item.href)} className={`nav-item${navActive(item.href) ? " active" : ""}`}>
                     {item.icon}
                     <span>{item.label}</span>
                   </Link>

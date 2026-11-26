@@ -44,15 +44,43 @@ function rowFrom(raw: Record<string, unknown>): Row {
   return out;
 }
 
+/* --- Short-TTL read cache ---------------------------------------------------
+ * The Neon HTTP driver does one network round-trip per query, and most pages
+ * read several tables — often the same table from more than one helper. This
+ * memoises each table's full snapshot for a few seconds AND coalesces
+ * concurrent reads of a table into a single query, so one page render hits the
+ * network once per table instead of once per call, and rapid back/forth
+ * navigation is served from memory. Every write invalidates its table, so a
+ * user always sees their own change immediately. (The old Sheets layer did the
+ * same with a 12s snapshot; the Neon rewrite had dropped it.)
+ */
+const READ_TTL_MS = 4000;
+const snap = new Map<string, { at: number; rows: Row[] }>();
+const inflight = new Map<string, Promise<Row[]>>();
+function invalidate(tab: string) { snap.delete(tab); inflight.delete(tab); }
+
 /** Every row, including the internal __rowid (used by update/delete). */
-async function selectAll(tab: string): Promise<Row[]> {
-  const rows = (await db().query(`select * from ${qi(tab)} order by __rowid`)) as Record<string, unknown>[];
-  return rows.map(rowFrom);
+async function selectAll(tab: string, fresh = false): Promise<Row[]> {
+  if (!fresh) {
+    const hit = snap.get(tab);
+    if (hit && Date.now() - hit.at < READ_TTL_MS) return hit.rows;
+    const pending = inflight.get(tab);
+    if (pending) return pending;
+  }
+  const p = (async () => {
+    const rows = (await db().query(`select * from ${qi(tab)} order by __rowid`)) as Record<string, unknown>[];
+    const mapped = rows.map(rowFrom);
+    snap.set(tab, { at: Date.now(), rows: mapped });
+    return mapped;
+  })();
+  inflight.set(tab, p);
+  try { return await p; } finally { if (inflight.get(tab) === p) inflight.delete(tab); }
 }
 
-/** Read every row of a tab. Returns only the schema columns (no __rowid). */
-export async function allRows(tab: string, _opts?: { fresh?: boolean }): Promise<Row[]> {
-  const rows = await selectAll(tab);
+/** Read every row of a tab. Returns only the schema columns (no __rowid).
+ *  Pass { fresh: true } to bypass the read cache for this call. */
+export async function allRows(tab: string, opts?: { fresh?: boolean }): Promise<Row[]> {
+  const rows = await selectAll(tab, opts?.fresh);
   return rows.map(({ __rowid, ...rest }) => rest as Row);
 }
 
@@ -69,6 +97,7 @@ export async function appendRows(tab: string, rows: Row[]): Promise<void> {
     for (const c of cols) params.push(row[c] ?? "");
   }
   await db().query(`insert into ${qi(tab)} (${colList}) values ${tuples.join(", ")}`, params);
+  invalidate(tab);
 }
 
 export async function appendRow(tab: string, data: Row): Promise<void> {
@@ -77,7 +106,7 @@ export async function appendRow(tab: string, data: Row): Promise<void> {
 
 /** Update every row matching `pred`, applying `patch`. Returns rows changed. */
 export async function updateWhere(tab: string, pred: (row: Row) => boolean, patch: Row): Promise<number> {
-  const matches = (await selectAll(tab)).filter((r) => pred(r));
+  const matches = (await selectAll(tab, true)).filter((r) => pred(r));
   if (!matches.length) return 0;
   const cols = columnsFor(tab).filter((c) => Object.prototype.hasOwnProperty.call(patch, c));
   if (!cols.length) return matches.length;
@@ -86,17 +115,19 @@ export async function updateWhere(tab: string, pred: (row: Row) => boolean, patc
   const setClause = cols.map((c) => { params.push(patch[c] ?? ""); return `${qi(c)} = $${p++}`; }).join(", ");
   const inList = matches.map((r) => { params.push(Number(r.__rowid)); return `$${p++}`; }).join(", ");
   await db().query(`update ${qi(tab)} set ${setClause} where __rowid in (${inList})`, params);
+  invalidate(tab);
   return matches.length;
 }
 
 /** Delete every row matching `pred`. Returns rows removed. */
 export async function deleteWhere(tab: string, pred: (row: Row) => boolean): Promise<number> {
-  const matches = (await selectAll(tab)).filter((r) => pred(r));
+  const matches = (await selectAll(tab, true)).filter((r) => pred(r));
   if (!matches.length) return 0;
   const params: number[] = [];
   let p = 1;
   const inList = matches.map((r) => { params.push(Number(r.__rowid)); return `$${p++}`; }).join(", ");
   await db().query(`delete from ${qi(tab)} where __rowid in (${inList})`, params);
+  invalidate(tab);
   return matches.length;
 }
 
