@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "@/components/NotificationBell";
+import Appearance from "@/components/Appearance";
 import PwaPrompts from "@/components/PwaPrompts";
 import Avatar, { avatarSrc } from "@/components/Avatar";
 import { isManager, canPlan, roleLabel } from "@/lib/roles";
@@ -104,7 +105,6 @@ function greetWord(): string {
 export default function Shell({ user, isOwner = false, children }: { user: SessionUser; isOwner?: boolean; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [greeting, setGreeting] = useState("Welcome back");
   const [dateStr, setDateStr] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
@@ -135,8 +135,6 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   }
 
   useEffect(() => {
-    const t = (document.documentElement.getAttribute("data-theme") as "light" | "dark") || "light";
-    setTheme(t);
     setGreeting(greetWord());
     setDateStr(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }));
     setMounted(true);
@@ -157,17 +155,6 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
     mainRef.current?.scrollTo({ top: 0 });
     setMoreOpen(false);
   }, [pathname]);
-
-  function toggleTheme() {
-    const nextT = theme === "dark" ? "light" : "dark";
-    setTheme(nextT);
-    document.documentElement.setAttribute("data-theme", nextT);
-    try {
-      localStorage.setItem("tudo-theme", nextT);
-    } catch {
-      /* ignore */
-    }
-  }
 
   const first = user.name.split(" ")[0] || user.name;
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
@@ -256,9 +243,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
             <button className="icon-btn" onClick={refreshNow} title="Refresh now" type="button" style={syncing ? { animation: "spin .6s linear" } : undefined}>
               {icons.refresh}
             </button>
-            <button className="icon-btn" onClick={toggleTheme} title="Toggle theme" type="button" suppressHydrationWarning>
-              {theme === "dark" ? icons.sun : icons.moon}
-            </button>
+            <Appearance />
             <NotificationBell />
             <Link href="/account" style={{ textDecoration: "none" }} title="Account & password">
               <Avatar name={user.name} color={user.color} src={meSrc} />
@@ -304,10 +289,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
                 {icons.account}
                 <span>Account &amp; password</span>
               </Link>
-              <button type="button" className="nav-item" onClick={toggleTheme}>
-                {theme === "dark" ? icons.sun : icons.moon}
-                <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
-              </button>
+              <Appearance variant="sheet" />
               <form action={logout}>
                 <button className="nav-item" type="submit" style={{ width: "100%" }}>
                   {icons.logout}

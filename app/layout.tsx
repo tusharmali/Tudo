@@ -45,7 +45,7 @@ export const viewport: Viewport = {
 };
 
 // Set the theme before paint to avoid a light/dark flash on first load.
-const themeInit = `(function(){try{var t=localStorage.getItem('tudo-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
+const themeInit = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('tudo-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}d.setAttribute('data-theme',t);var a=localStorage.getItem('tudo-accent');if(a&&a!=='indigo'){d.setAttribute('data-accent',a);}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

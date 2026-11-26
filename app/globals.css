@@ -268,3 +268,51 @@ button.mnav { border: 0; cursor: pointer; font-family: inherit; }
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .05ms !important; }
   .blob { animation: none; }
 }
+
+/* ---------- Appearance: accent themes (default indigo = no attribute, untouched) ---------- */
+:root[data-accent="teal"]   { --accent: #3fa98a; --accent-ink: #2f8f76; }
+:root[data-accent="rose"]   { --accent: #de7c9a; --accent-ink: #c75f7f; }
+:root[data-accent="amber"]  { --accent: #cf8f4a; --accent-ink: #b0762f; }
+:root[data-accent="violet"] { --accent: #9b7ad6; --accent-ink: #7f5bc0; }
+:root[data-accent="sky"]    { --accent: #4f97d6; --accent-ink: #3a7cbd; }
+/* washes derive from the chosen accent + current surface, so they stay theme-correct */
+:root[data-accent="teal"], :root[data-accent="rose"], :root[data-accent="amber"], :root[data-accent="violet"], :root[data-accent="sky"] {
+  --accent-wash: color-mix(in srgb, var(--accent) 13%, var(--surface));
+  --accent-wash-2: color-mix(in srgb, var(--accent) 22%, var(--surface));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-accent="teal"]   { --accent: #5fc4a5; --accent-ink: #76d0b5; }
+  :root:not([data-theme="light"])[data-accent="rose"]   { --accent: #ec9bb4; --accent-ink: #f0b3c5; }
+  :root:not([data-theme="light"])[data-accent="amber"]  { --accent: #e6b072; --accent-ink: #eec28a; }
+  :root:not([data-theme="light"])[data-accent="violet"] { --accent: #b79be8; --accent-ink: #c9b4ef; }
+  :root:not([data-theme="light"])[data-accent="sky"]    { --accent: #7db6ec; --accent-ink: #9bc8f2; }
+  :root:not([data-theme="light"])[data-accent="teal"], :root:not([data-theme="light"])[data-accent="rose"], :root:not([data-theme="light"])[data-accent="amber"], :root:not([data-theme="light"])[data-accent="violet"], :root:not([data-theme="light"])[data-accent="sky"] {
+    --accent-wash: color-mix(in srgb, var(--accent) 17%, var(--surface));
+    --accent-wash-2: color-mix(in srgb, var(--accent) 27%, var(--surface));
+  }
+}
+:root[data-theme="dark"][data-accent="teal"]   { --accent: #5fc4a5; --accent-ink: #76d0b5; }
+:root[data-theme="dark"][data-accent="rose"]   { --accent: #ec9bb4; --accent-ink: #f0b3c5; }
+:root[data-theme="dark"][data-accent="amber"]  { --accent: #e6b072; --accent-ink: #eec28a; }
+:root[data-theme="dark"][data-accent="violet"] { --accent: #b79be8; --accent-ink: #c9b4ef; }
+:root[data-theme="dark"][data-accent="sky"]    { --accent: #7db6ec; --accent-ink: #9bc8f2; }
+:root[data-theme="dark"][data-accent="teal"], :root[data-theme="dark"][data-accent="rose"], :root[data-theme="dark"][data-accent="amber"], :root[data-theme="dark"][data-accent="violet"], :root[data-theme="dark"][data-accent="sky"] {
+  --accent-wash: color-mix(in srgb, var(--accent) 17%, var(--surface));
+  --accent-wash-2: color-mix(in srgb, var(--accent) 27%, var(--surface));
+}
+
+/* ---------- Appearance popover ---------- */
+.appear-pop { position: absolute; top: 48px; right: 0; z-index: 80; width: 232px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); padding: 14px; animation: pop .18s cubic-bezier(.2,.9,.25,1) both; }
+.appear-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint); margin: 2px 2px 8px; }
+.seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; background: var(--surface-3); padding: 3px; border-radius: var(--r-pill); margin-bottom: 14px; }
+.seg3 button { padding: 7px 4px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; color: var(--ink-soft); display: flex; align-items: center; justify-content: center; gap: 4px; }
+.seg3 button.on { background: var(--surface); color: var(--accent-ink); box-shadow: var(--shadow-sm); }
+.swatches { display: flex; gap: 9px; flex-wrap: wrap; padding: 2px; }
+.swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; position: relative; transition: transform .15s; }
+.swatch:hover { transform: scale(1.1); }
+.swatch.on { border-color: var(--ink); }
+.swatch.on::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
+
+/* ---------- Mobile nav active pill + sheet swatches ---------- */
+@media (max-width: 900px) { .mnav.active { background: var(--accent-wash); } }
+.sheet-appear { display: flex; align-items: center; gap: 9px; padding: 10px 12px; flex-wrap: wrap; }
