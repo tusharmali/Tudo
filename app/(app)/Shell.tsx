@@ -195,6 +195,19 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   const allItems = sections.flatMap((s) => s.items);
   const favItems = allItems.filter((i) => favs.includes(i.href));
 
+  // Mobile app-bar shows the CURRENT screen's title (like a native app), not a
+  // generic greeting on every page. Home keeps the warm greeting.
+  const onHome = pathname === "/dashboard";
+  const screenTitle = (() => {
+    const map: Record<string, string> = { "/account": "Account", "/notifications": "Notifications" };
+    for (const it of allItems) map[it.href] = it.label;
+    for (const k of Object.keys(map).sort((a, b) => b.length - a.length)) {
+      if (pathname === k || pathname.startsWith(k + "/")) return map[k];
+    }
+    return "Tudo";
+  })();
+  const mobileTitle = onHome ? `${greeting}, ${first}` : screenTitle;
+
   const renderItem = (item: NavItem) => (
     <div className="nav-row" key={item.href}>
       <Link href={item.href} onClick={() => startNav(item.href)} className={`nav-item${navActive(item.href) ? " active" : ""}`} title={item.label}>
@@ -253,17 +266,21 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
 
       <div className="main" ref={mainRef}>
         <header className="topbar">
-          <div>
+          <div className="tb-desktop">
             <h2>
               {greeting}, {first} 👋
             </h2>
             <div className="sub">{dateStr || roleText}</div>
           </div>
+          <div className="tb-mobile">
+            <div className="tb-title">{mobileTitle}{onHome ? " 👋" : ""}</div>
+            {onHome && dateStr && <div className="tb-sub">{dateStr}</div>}
+          </div>
           <div className="top-actions">
-            <button className="icon-btn" onClick={refreshNow} title="Refresh now" type="button" style={syncing ? { animation: "spin .6s linear" } : undefined}>
+            <button className="icon-btn tb-appearance" onClick={refreshNow} title="Refresh now" type="button" style={syncing ? { animation: "spin .6s linear" } : undefined}>
               {icons.refresh}
             </button>
-            <Appearance />
+            <span className="tb-appearance"><Appearance /></span>
             <NotificationBell />
             <Link href="/account" style={{ textDecoration: "none" }} title="Account & password">
               <Avatar name={user.name} color={user.color} src={meSrc} />
