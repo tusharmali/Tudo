@@ -313,6 +313,63 @@ button.mnav { border: 0; cursor: pointer; font-family: inherit; }
 .swatch.on { border-color: var(--ink); }
 .swatch.on::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
 
+/* ============================================================
+   Command palette (⌘K quick switcher) + search triggers
+   ============================================================ */
+.side-search {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  margin: 2px 0 6px; padding: 9px 12px; border-radius: var(--r-sm);
+  background: var(--surface-3); color: var(--ink-soft); font-size: 13.5px; font-weight: 550;
+  border: 1px solid transparent; transition: background .16s, color .16s, border-color .16s;
+}
+.side-search svg { width: 17px; height: 17px; stroke-width: 2; flex: none; }
+.side-search span { flex: 1; text-align: left; }
+.side-search:hover { background: var(--accent-wash); color: var(--accent-ink); border-color: var(--accent-wash-2); }
+.side-kbd, kbd { font-family: var(--sans); font-size: 10.5px; font-weight: 700; color: var(--ink-faint); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; line-height: 1; }
+.side-collapse ~ .side-search { } /* keep specificity simple */
+.app.collapsed .side-search span, .app.collapsed .side-kbd { display: none; }
+.app.collapsed .side-search { justify-content: center; }
+
+.mobile-search-btn { display: none; }
+
+.cmdk-backdrop {
+  position: fixed; inset: 0; z-index: 120; display: flex; justify-content: center; align-items: flex-start;
+  padding: max(12vh, 60px) 16px 16px; background: color-mix(in srgb, #10101a 52%, transparent);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: sheet-fade .14s ease;
+}
+.cmdk {
+  width: min(580px, 100%); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-md); box-shadow: var(--shadow-lg); overflow: hidden;
+  display: flex; flex-direction: column; max-height: min(66vh, 560px);
+  animation: cmdk-in .18s cubic-bezier(.2,.9,.25,1) both;
+}
+@keyframes cmdk-in { from { opacity: 0; transform: translateY(-10px) scale(.985); } to { opacity: 1; transform: none; } }
+.cmdk-head { display: flex; align-items: center; gap: 11px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+.cmdk-ic { width: 19px; height: 19px; stroke-width: 2; color: var(--ink-faint); flex: none; }
+.cmdk-input { flex: 1; min-width: 0; border: none; background: none; outline: none; color: var(--ink); font-size: 16px; font-weight: 500; }
+.cmdk-input::placeholder { color: var(--ink-faint); }
+.cmdk-esc { flex: none; }
+.cmdk-list { overflow-y: auto; padding: 8px; -webkit-overflow-scrolling: touch; }
+.cmdk-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 10px 12px; border-radius: var(--r-sm); color: var(--ink); background: none; border: none;
+  font-size: 14.5px; font-weight: 550;
+}
+.cmdk-item-ic { width: 22px; height: 22px; display: grid; place-items: center; color: var(--ink-soft); flex: none; }
+.cmdk-item-ic svg { width: 19px; height: 19px; stroke-width: 1.9; }
+.cmdk-item-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmdk-item-sec { font-size: 11px; color: var(--ink-faint); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; flex: none; }
+.cmdk-item.on { background: var(--accent-wash); color: var(--accent-ink); }
+.cmdk-item.on .cmdk-item-ic { color: var(--accent-ink); }
+.cmdk-empty { padding: 26px 16px; text-align: center; color: var(--ink-faint); font-size: 13.5px; }
+.cmdk-foot { display: flex; gap: 16px; padding: 10px 16px; border-top: 1px solid var(--line-soft); font-size: 11.5px; color: var(--ink-faint); }
+.cmdk-foot span { display: inline-flex; align-items: center; gap: 5px; }
+.cmdk-foot kbd { font-size: 10px; padding: 1px 5px; }
+@media (max-width: 560px) {
+  .cmdk-backdrop { padding: 64px 12px 12px; }
+  .cmdk-foot { display: none; }
+}
+
 /* ---------- Mobile nav active pill + sheet swatches ---------- */
 @media (max-width: 900px) { .mnav.active { background: var(--accent-wash); } }
 .sheet-appear { display: flex; align-items: center; gap: 9px; padding: 10px 12px; flex-wrap: wrap; }

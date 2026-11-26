@@ -193,6 +193,7 @@ body {
   /* Declutter the app header — refresh + accent picker live in the "More" sheet
      and pull-to-refresh; keep the header to the title + alerts + you. */
   .tb-appearance { display: none; }
+  .mobile-search-btn { display: grid; }
   .top-actions { gap: 8px; flex: none; }
 
   /* Content clears the bottom tab bar + home indicator. */

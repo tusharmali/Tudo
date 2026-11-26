@@ -7,6 +7,7 @@ import { logout } from "@/app/actions/auth";
 import NotificationBell from "@/components/NotificationBell";
 import Appearance from "@/components/Appearance";
 import RouteFade from "@/components/RouteFade";
+import CommandPalette, { type CmdItem } from "@/components/CommandPalette";
 import PwaPrompts from "@/components/PwaPrompts";
 import Avatar, { avatarSrc } from "@/components/Avatar";
 import { isManager, canPlan, roleLabel } from "@/lib/roles";
@@ -45,6 +46,7 @@ const icons = {
   assets: svg(<><rect x="3" y="4" width="18" height="12" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 20h8M12 16v4" /></>),
   coffee: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8ZM17 9h2.5a2.5 2.5 0 0 1 0 5H17M7 3v2M11 3v2M15 3v2" />),
   board: svg(<><rect x="3" y="4" width="5" height="16" rx="1.4" /><rect x="10" y="4" width="5" height="11" rx="1.4" /><rect x="17" y="4" width="4" height="7" rx="1.4" /></>),
+  search: svg(<><circle cx="11" cy="11" r="7" /><path strokeLinecap="round" d="m20 20-3.5-3.5" /></>),
 };
 
 type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[]; ownerOnly?: boolean; plannerOnly?: boolean };
@@ -116,6 +118,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   // The route we're navigating TO — set the instant a nav link is tapped so the
   // target lights up and a progress bar appears before the server responds.
   const [navTo, setNavTo] = useState<string | null>(null);
+  const [cmdOpen, setCmdOpen] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
   // Keep every screen live, but cheaply: soft-refresh server data every 2 min and
@@ -171,6 +174,19 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
     return () => clearTimeout(t);
   }, [navTo]);
 
+  // ⌘K / Ctrl-K opens the quick switcher from anywhere; it toggles so the same
+  // keystroke closes it too.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const first = user.name.split(" ")[0] || user.name;
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
   // Optimistic: treat the just-clicked destination as active too, so feedback
@@ -208,6 +224,15 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   })();
   const mobileTitle = onHome ? `${greeting}, ${first}` : screenTitle;
 
+  // Everything the ⌘K quick switcher can jump to — the nav items this person can
+  // reach, plus their personal pages.
+  const paletteItems: CmdItem[] = [
+    ...sections.flatMap((s) => s.items.map((it) => ({ href: it.href, label: it.label, icon: it.icon, section: s.section || "" }))),
+    { href: "/account", label: "Account & password", icon: icons.account, section: "You" },
+    { href: "/notifications", label: "Notifications", icon: icons.broadcast, section: "You" },
+  ];
+  const goTo = (href: string) => { startNav(href); setCmdOpen(false); router.push(href); };
+
   const renderItem = (item: NavItem) => (
     <div className="nav-row" key={item.href}>
       <Link href={item.href} onClick={() => startNav(item.href)} className={`nav-item${navActive(item.href) ? " active" : ""}`} title={item.label}>
@@ -232,6 +257,12 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
             {collapsed ? "»" : "«"}
           </button>
         </div>
+
+        <button type="button" className="side-search" onClick={() => setCmdOpen(true)} title="Search — ⌘K">
+          {icons.search}
+          <span>Search…</span>
+          <kbd className="side-kbd">⌘K</kbd>
+        </button>
 
         <div className="side-nav">
           {mounted && favItems.length > 0 && (
@@ -277,6 +308,9 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
             {onHome && dateStr && <div className="tb-sub">{dateStr}</div>}
           </div>
           <div className="top-actions">
+            <button className="icon-btn mobile-search-btn" onClick={() => setCmdOpen(true)} title="Search" aria-label="Search" type="button">
+              {icons.search}
+            </button>
             <button className="icon-btn tb-appearance" onClick={refreshNow} title="Refresh now" type="button" style={syncing ? { animation: "spin .6s linear" } : undefined}>
               {icons.refresh}
             </button>
@@ -290,6 +324,8 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
 
         <main className="canvas"><RouteFade>{children}</RouteFade></main>
       </div>
+
+      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} items={paletteItems} onNavigate={goTo} />
 
       <PwaPrompts />
 
