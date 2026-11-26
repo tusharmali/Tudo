@@ -42,6 +42,7 @@ const icons = {
   wallet: svg(<><rect x="3" y="6" width="18" height="13" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M16 14h2" /></>),
   assets: svg(<><rect x="3" y="4" width="18" height="12" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 20h8M12 16v4" /></>),
   coffee: svg(<path strokeLinecap="round" strokeLinejoin="round" d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8ZM17 9h2.5a2.5 2.5 0 0 1 0 5H17M7 3v2M11 3v2M15 3v2" />),
+  board: svg(<><rect x="3" y="4" width="5" height="16" rx="1.4" /><rect x="10" y="4" width="5" height="11" rx="1.4" /><rect x="17" y="4" width="4" height="7" rx="1.4" /></>),
 };
 
 type NavItem = { href: string; label: string; icon: ReactNode; badge?: string; depts?: string[]; ownerOnly?: boolean; plannerOnly?: boolean };
@@ -53,6 +54,7 @@ const NAV: NavSection[] = [
     section: "Daily",
     items: [
       { href: "/updates", label: "Updates & Plan", icon: icons.updates },
+      { href: "/board", label: "Work Board", icon: icons.board },
       { href: "/attendance", label: "Attendance", icon: icons.attendance },
       { href: "/my", label: "My Space", icon: icons.myspace },
     ],
