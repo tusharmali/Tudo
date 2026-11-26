@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { moveTaskAction, addBoardTaskAction, deleteBoardTaskAction, carryOverAction } from "@/app/actions/board";
 import { toast } from "@/components/Toaster";
 import Avatar, { avatarSrc } from "@/components/Avatar";
+import PlannerPanel from "./PlannerPanel";
 import type { TaskNode } from "@/lib/tasks";
 
 type Col = "backlog" | "todo" | "doing" | "done";
@@ -111,7 +112,10 @@ export default function BoardClient({
             <p className="muted tiny" style={{ margin: "2px 0 0" }}>Drag cards between columns. Pull from Backlog into Today as your day targets.</p>
           </div>
         </div>
-        {canEdit && <button className="btn btn-ghost" type="button" onClick={carry} style={{ padding: "8px 13px", fontSize: 12.5 }} title="Push unfinished tasks to tomorrow">↪ Carry unfinished to tomorrow</button>}
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          {viewerIsPlanner && <PlannerPanel date={date} />}
+          {canEdit && <button className="btn btn-ghost" type="button" onClick={carry} style={{ padding: "8px 13px", fontSize: 12.5 }} title="Push unfinished tasks to tomorrow">↪ Carry unfinished to tomorrow</button>}
+        </div>
       </div>
 
       <div className="board-grid">

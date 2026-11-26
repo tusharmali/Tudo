@@ -393,3 +393,7 @@ a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .board-grid { grid-template-columns: repeat(4, minmax(80vw, 1fr)); overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 6px; margin: 0 -2px; }
   .board-col { scroll-snap-align: start; }
 }
+
+/* --- Modal (review dialogs) --- */
+.modal-back { position: fixed; inset: 0; z-index: 90; background: color-mix(in srgb, var(--ink) 45%, transparent); display: flex; align-items: center; justify-content: center; padding: 18px; backdrop-filter: blur(2px); }
+.modal-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-lg, 0 20px 50px rgba(0,0,0,.25)); padding: 20px; width: 100%; max-width: 640px; max-height: 88vh; overflow: hidden; display: flex; flex-direction: column; }
