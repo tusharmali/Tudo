@@ -29,6 +29,7 @@ export type SheetName =
   | "Notifications"
   | "PushSubscriptions"
   | "Settings"
+  | "Presence"
   | "Kudos"
   | "Shoots"
   | "Milestones"
@@ -60,6 +61,7 @@ export const SCHEMA: Record<SheetName, string[]> = {
   Notifications: ["id", "title", "body", "target", "createdBy", "url", "createdAt"],
   PushSubscriptions: ["id", "userId", "endpoint", "p256dh", "auth", "createdAt"],
   Settings: ["key", "value"],
+  Presence: ["userId", "lastSeen"],
   Kudos: ["id", "fromUserId", "toUserId", "category", "message", "createdAt"],
   Shoots: ["id", "client", "title", "date", "status", "assigneeId", "notes", "createdBy", "createdAt"],
   Milestones: ["id", "userId", "title", "targetDate", "status", "notes", "createdBy", "createdAt"],

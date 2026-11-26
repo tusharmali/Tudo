@@ -8,6 +8,7 @@ import NotificationBell from "@/components/NotificationBell";
 import Appearance from "@/components/Appearance";
 import RouteFade from "@/components/RouteFade";
 import CommandPalette, { type CmdItem } from "@/components/CommandPalette";
+import PresenceBar from "@/components/PresenceBar";
 import PwaPrompts from "@/components/PwaPrompts";
 import Avatar, { avatarSrc } from "@/components/Avatar";
 import { isManager, canPlan, roleLabel } from "@/lib/roles";
@@ -308,6 +309,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
             {onHome && dateStr && <div className="tb-sub">{dateStr}</div>}
           </div>
           <div className="top-actions">
+            <PresenceBar />
             <button className="icon-btn mobile-search-btn" onClick={() => setCmdOpen(true)} title="Search" aria-label="Search" type="button">
               {icons.search}
             </button>

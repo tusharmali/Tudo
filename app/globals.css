@@ -370,6 +370,26 @@ button.mnav { border: 0; cursor: pointer; font-family: inherit; }
   .cmdk-foot { display: none; }
 }
 
+/* ============================================================
+   Live presence — "who's online" cluster
+   ============================================================ */
+.presence { position: relative; display: inline-flex; }
+.presence-btn { display: inline-flex; align-items: center; gap: 8px; padding: 4px 8px 4px 6px; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line); transition: background .16s, border-color .16s, transform .16s; }
+.presence-btn:hover { background: var(--surface-3); border-color: var(--accent-wash-2); }
+.presence-btn:active { transform: scale(.96); }
+.presence-stack { display: inline-flex; }
+.presence-av { border: 2px solid var(--surface); margin-left: -9px; }
+.presence-stack .presence-av:first-child { margin-left: 0; }
+.online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); flex: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--good) 28%, transparent); }
+.presence-count { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; padding-right: 2px; }
+.presence-pop { position: absolute; top: 46px; right: 0; z-index: 80; width: 244px; max-height: 60vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); padding: 8px; animation: pop .16s cubic-bezier(.2,.9,.25,1) both; }
+.presence-pop-head { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint); padding: 6px 8px 8px; }
+.presence-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: var(--r-sm); }
+.presence-row:hover { background: var(--surface-3); }
+.presence-row-meta { flex: 1; min-width: 0; }
+.presence-row-meta .n { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.presence-row-meta .d { font-size: 11px; color: var(--ink-faint); text-transform: capitalize; }
+
 /* ---------- Mobile nav active pill + sheet swatches ---------- */
 @media (max-width: 900px) { .mnav.active { background: var(--accent-wash); } }
 .sheet-appear { display: flex; align-items: center; gap: 9px; padding: 10px 12px; flex-wrap: wrap; }

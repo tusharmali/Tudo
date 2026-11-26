@@ -195,6 +195,10 @@ body {
   .tb-appearance { display: none; }
   .mobile-search-btn { display: grid; }
   .top-actions { gap: 8px; flex: none; }
+  /* Presence collapses to a dot + count on phones. */
+  .presence-stack { display: none; }
+  .presence-btn { padding: 6px 9px; }
+  .presence-pop { right: -40px; }
 
   /* Content clears the bottom tab bar + home indicator. */
   .canvas { padding: 16px 16px calc(94px + env(safe-area-inset-bottom)); }
