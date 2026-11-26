@@ -121,6 +121,13 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   const [navTo, setNavTo] = useState<string | null>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [badges, setBadges] = useState<Record<string, number>>({});
+  // Pull-to-refresh (touch): how far the top is pulled, and whether a refresh is
+  // in flight. Swipe-to-dismiss: how far the "More" sheet is dragged down.
+  const [pull, setPull] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sheetDrag, setSheetDrag] = useState(0);
+  const pullStart = useRef<number | null>(null);
+  const sheetStart = useRef<number | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
 
   // Keep every screen live, but cheaply: soft-refresh server data every 2 min and
@@ -209,6 +216,46 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Pull-to-refresh: drag down from the very top of the scroll area to refresh,
+  // like a native app. Passive listeners + overscroll-behavior:contain (CSS)
+  // keep it smooth and stop the browser's own pull-to-reload from fighting it.
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const onStart = (e: TouchEvent) => {
+      pullStart.current = el.scrollTop <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (pullStart.current == null || refreshing) return;
+      const dy = e.touches[0].clientY - pullStart.current;
+      if (dy > 0 && el.scrollTop <= 0) setPull(Math.min(dy * 0.5, 80));
+      else { pullStart.current = null; setPull(0); }
+    };
+    const onEnd = () => {
+      if (pullStart.current == null) return;
+      pullStart.current = null;
+      setPull((p) => {
+        if (p > 52 && !refreshing) {
+          setRefreshing(true);
+          router.refresh();
+          window.setTimeout(() => { setRefreshing(false); setPull(0); }, 900);
+          return 52;
+        }
+        return 0;
+      });
+    };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: true });
+    el.addEventListener("touchend", onEnd, { passive: true });
+    el.addEventListener("touchcancel", onEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, [refreshing, router]);
 
   const first = user.name.split(" ")[0] || user.name;
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
@@ -324,6 +371,11 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
       </aside>
 
       <div className="main" ref={mainRef}>
+        <div className="ptr" style={{ transform: `translate(-50%, ${pull - 50}px)`, opacity: Math.min(pull / 46, 1) }} aria-hidden>
+          <span className={`ptr-ic${refreshing ? " spin" : ""}`} style={refreshing ? undefined : { transform: `rotate(${Math.round(pull * 4)}deg)` }}>
+            {icons.refresh}
+          </span>
+        </div>
         <header className="topbar">
           <div className="tb-desktop">
             <h2>
@@ -366,7 +418,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
             <span>{item.label}</span>
           </Link>
         ))}
-        <button type="button" className={`mnav${moreOpen ? " active" : ""}`} onClick={() => setMoreOpen(true)}>
+        <button type="button" className={`mnav${moreOpen ? " active" : ""}`} onClick={() => { setSheetDrag(0); setMoreOpen(true); }}>
           {icons.more}
           {moreBadge > 0 && <span className="mnav-badge">{moreBadge > 99 ? "99+" : moreBadge}</span>}
           <span>More</span>
@@ -375,7 +427,21 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
 
       {moreOpen && (
         <div className="sheet-backdrop" onClick={() => setMoreOpen(false)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Menu">
+          <div
+            className="sheet"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Menu"
+            style={sheetDrag ? { transform: `translateY(${sheetDrag}px)`, transition: "none" } : undefined}
+            onTouchStart={(e) => { sheetStart.current = e.currentTarget.scrollTop <= 0 ? e.touches[0].clientY : null; }}
+            onTouchMove={(e) => {
+              if (sheetStart.current == null) return;
+              const dy = e.touches[0].clientY - sheetStart.current;
+              if (dy > 0 && e.currentTarget.scrollTop <= 0) setSheetDrag(dy);
+              else { sheetStart.current = null; setSheetDrag(0); }
+            }}
+            onTouchEnd={() => { const shouldClose = sheetDrag > 90; sheetStart.current = null; setSheetDrag(0); if (shouldClose) setMoreOpen(false); }}
+          >
             <div className="sheet-grip" />
             {sections.map((sec, i) => (
               <div key={i}>

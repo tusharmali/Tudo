@@ -410,6 +410,23 @@ a, button, label, summary, [role="button"],
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body { overscroll-behavior-y: none; }
 .main, .canvas, .sheet, .appear-pop { -webkit-overflow-scrolling: touch; }
+.main { overscroll-behavior-y: contain; } /* stop the browser's own pull-to-reload fighting ours */
+
+/* Pull-to-refresh spinner — slides out from under the app-bar as you pull. */
+.ptr {
+  position: absolute; top: calc(46px + env(safe-area-inset-top)); left: 50%; z-index: 35;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+  display: grid; place-items: center; color: var(--accent-ink); pointer-events: none;
+}
+.ptr-ic { display: grid; place-items: center; }
+.ptr-ic svg { width: 18px; height: 18px; stroke-width: 2; display: block; }
+.ptr-ic.spin { animation: ptr-spin .7s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
+
+/* Swipe-to-dismiss: the sheet snaps back smoothly when the drag is released. */
+.sheet { transition: transform .22s cubic-bezier(.22,.61,.36,1); }
+@media (prefers-reduced-motion: reduce) { .ptr-ic.spin { animation-duration: 1.4s; } }
 
 /* Tactile press — a tiny scale-down confirms the hit instantly. */
 .qa-tile, .stat { transition: transform .16s cubic-bezier(.2,.9,.25,1), box-shadow .2s, background .2s; }
