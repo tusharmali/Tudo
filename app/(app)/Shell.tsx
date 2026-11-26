@@ -112,14 +112,18 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   const [mounted, setMounted] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
-  // Keep every screen live: soft-refresh server data every 30s (paused when the
-  // tab is hidden). Client state — inputs, open menus — is preserved. Chat is
-  // excluded: it runs its own 5s message poll, so a page refresh would jar it.
+  // Keep every screen live, but cheaply: soft-refresh server data every 2 min and
+  // only when the tab is actually in front (visible AND focused). Background tabs
+  // used to poll 24/7 and exhausted the Vercel free quota. The ⟳ button is there
+  // for an instant refresh. Chat is excluded — it runs its own message poll.
   useEffect(() => {
     if (pathname === "/chat") return;
-    const tick = () => { if (document.visibilityState === "visible") router.refresh(); };
-    const t = setInterval(tick, 30000);
-    return () => clearInterval(t);
+    const tick = () => { if (document.visibilityState === "visible" && document.hasFocus()) router.refresh(); };
+    const t = setInterval(tick, 120000);
+    // Refresh once when the tab comes back to the foreground so it's fresh on return.
+    const onShow = () => { if (document.visibilityState === "visible") router.refresh(); };
+    document.addEventListener("visibilitychange", onShow);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", onShow); };
   }, [router, pathname]);
 
   function refreshNow() {
