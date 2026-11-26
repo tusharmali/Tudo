@@ -212,8 +212,15 @@ body {
     border-top: 1px solid var(--line);
     box-shadow: 0 -6px 20px rgba(16,16,26,.05);
   }
-  .mnav { gap: 4px; padding: 6px 12px; transition: color .16s, background .16s, transform .16s; }
+  .mnav { gap: 4px; padding: 6px 12px; transition: color .16s, background .16s, transform .16s; position: relative; }
   .mnav svg { transition: transform .18s cubic-bezier(.2,.9,.25,1); }
   .mnav.active svg { transform: translateY(-1px) scale(1.06); }
   .mnav:active { transform: scale(.93); }
+  .mnav-badge {
+    position: absolute; top: 3px; left: 50%; margin-left: 5px;
+    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+    background: var(--blush); color: #fff; font-size: 10px; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface) 90%, transparent);
+  }
 }

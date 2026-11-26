@@ -120,6 +120,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   // target lights up and a progress bar appears before the server responds.
   const [navTo, setNavTo] = useState<string | null>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [badges, setBadges] = useState<Record<string, number>>({});
   const mainRef = useRef<HTMLDivElement>(null);
 
   // Keep every screen live, but cheaply: soft-refresh server data every 2 min and
@@ -174,6 +175,27 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
     const t = setTimeout(() => setNavTo(null), 6000);
     return () => clearTimeout(t);
   }, [navTo]);
+
+  // Live "needs your attention" counts for nav badges (unread chat, concerns to
+  // you, approvals to review). Refetched on every navigation — so counts drop as
+  // soon as you read something — plus a gentle 60s poll while the tab is visible.
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const r = await fetch("/api/attention", { cache: "no-store" });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (alive) setBadges(d && typeof d === "object" ? d : {});
+      } catch { /* keep last known */ }
+    };
+    load();
+    const t = setInterval(load, 60000);
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
+  }, [pathname]);
 
   // ⌘K / Ctrl-K opens the quick switcher from anywhere; it toggles so the same
   // keystroke closes it too.
@@ -234,12 +256,17 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
   ];
   const goTo = (href: string) => { startNav(href); setCmdOpen(false); router.push(href); };
 
+  const badgeText = (n?: number) => (n && n > 0 ? (n > 99 ? "99+" : String(n)) : "");
+  // Anything needing attention that isn't one of the bottom tabs rolls up onto "More".
+  const mobileHrefs = new Set(MOBILE.map((m) => m.href));
+  const moreBadge = Object.entries(badges).reduce((s, [href, n]) => (mobileHrefs.has(href) ? s : s + (n || 0)), 0);
+
   const renderItem = (item: NavItem) => (
     <div className="nav-row" key={item.href}>
       <Link href={item.href} onClick={() => startNav(item.href)} className={`nav-item${navActive(item.href) ? " active" : ""}`} title={item.label}>
         {item.icon}
         <span>{item.label}</span>
-        {item.badge && <span className="nav-badge">{item.badge}</span>}
+        {(badgeText(badges[item.href]) || item.badge) && <span className="nav-badge">{badgeText(badges[item.href]) || item.badge}</span>}
       </Link>
       <button type="button" className={`nav-star${favs.includes(item.href) ? " on" : ""}`} title={favs.includes(item.href) ? "Unpin from favorites" : "Pin to favorites"} onClick={() => toggleFav(item.href)}>
         {favs.includes(item.href) ? "★" : "☆"}
@@ -335,11 +362,13 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
         {MOBILE.map((item) => (
           <Link key={item.href} href={item.href} onClick={() => startNav(item.href)} className={`mnav${navActive(item.href) ? " active" : ""}`}>
             {item.icon}
+            {badgeText(badges[item.href]) && <span className="mnav-badge">{badgeText(badges[item.href])}</span>}
             <span>{item.label}</span>
           </Link>
         ))}
         <button type="button" className={`mnav${moreOpen ? " active" : ""}`} onClick={() => setMoreOpen(true)}>
           {icons.more}
+          {moreBadge > 0 && <span className="mnav-badge">{moreBadge > 99 ? "99+" : moreBadge}</span>}
           <span>More</span>
         </button>
       </nav>
@@ -355,6 +384,7 @@ export default function Shell({ user, isOwner = false, children }: { user: Sessi
                   <Link key={item.href} href={item.href} onClick={() => startNav(item.href)} className={`nav-item${navActive(item.href) ? " active" : ""}`}>
                     {item.icon}
                     <span>{item.label}</span>
+                    {badgeText(badges[item.href]) && <span className="nav-badge">{badgeText(badges[item.href])}</span>}
                   </Link>
                 ))}
               </div>
